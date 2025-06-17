@@ -37,4 +37,12 @@ export type GrammarSuggestion = {
     offset: number
     length: number
   }
+  // Enhanced metadata from the new grammar engine
+  ruleId?: string
+  category?: string
+  confidence?: number
+  examples?: {
+    incorrect: string
+    correct: string
+  }[]
 }

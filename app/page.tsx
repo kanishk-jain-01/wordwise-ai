@@ -13,7 +13,7 @@ export default function HomePage() {
             <div className="p-2 bg-primary rounded-lg">
               <FileText className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">WriteAssist</span>
+            <span className="text-xl font-bold">WordWiseAI</span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/auth/login">

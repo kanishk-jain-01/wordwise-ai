@@ -3,9 +3,11 @@
 import { useState, useEffect, useCallback } from "react"
 import type { Document } from "@/lib/db"
 import { DocumentSidebar } from "@/components/document-sidebar"
-import { EditorPanel } from "@/components/editor-panel"
+import { EditorPanel, type EditorActions } from "@/components/editor-panel"
 import { ToneIndicator } from "@/components/tone-indicator"
+import { WritingIssues } from "@/components/writing-issues"
 import { ProtectedRoute } from "@/components/protected-route"
+import type { GrammarSuggestion } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,6 +21,8 @@ export default function DashboardPage() {
   const [documentTitle, setDocumentTitle] = useState("")
   const [documentContent, setDocumentContent] = useState("")
   const [documentTone, setDocumentTone] = useState<string | null>(null)
+  const [suggestions, setSuggestions] = useState<GrammarSuggestion[]>([])
+  const [editorActions, setEditorActions] = useState<EditorActions | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -113,6 +117,7 @@ export default function DashboardPage() {
     setDocumentTitle(document.title)
     setDocumentContent(document.content)
     setDocumentTone(document.tone)
+    setSuggestions([]) // Clear suggestions when switching documents
   }
 
   // Handle document deletion
@@ -127,6 +132,7 @@ export default function DashboardPage() {
         setDocumentTitle("")
         setDocumentContent("")
         setDocumentTone(null)
+        setSuggestions([])
       }
     }
   }
@@ -140,6 +146,25 @@ export default function DashboardPage() {
       debouncedSave()
     }
   }, [documentTitle, documentContent, documentTone, selectedDocument, debouncedSave])
+
+  // Handle writing issues actions
+  const handleApplySuggestion = (suggestion: GrammarSuggestion, replacement: string) => {
+    if (editorActions) {
+      editorActions.applySuggestion(suggestion, replacement)
+    }
+  }
+
+  const handleIgnoreSuggestion = (suggestion: GrammarSuggestion) => {
+    if (editorActions) {
+      editorActions.ignoreSuggestion(suggestion)
+    }
+  }
+
+  const handleHighlightSuggestion = (suggestion: GrammarSuggestion) => {
+    if (editorActions) {
+      editorActions.highlightSuggestion(suggestion)
+    }
+  }
 
   useEffect(() => {
     loadDocuments()
@@ -196,6 +221,8 @@ export default function DashboardPage() {
                     initialContent={documentContent}
                     onContentChange={setDocumentContent}
                     onToneChange={setDocumentTone}
+                    onSuggestionsChange={setSuggestions}
+                    onEditorReady={setEditorActions}
                   />
                 </div>
 
@@ -232,6 +259,13 @@ export default function DashboardPage() {
                       </div>
                     </CardContent>
                   </Card>
+
+                  <WritingIssues
+                    suggestions={suggestions}
+                    onApplySuggestion={handleApplySuggestion}
+                    onIgnoreSuggestion={handleIgnoreSuggestion}
+                    onHighlightSuggestion={handleHighlightSuggestion}
+                  />
                 </div>
               </div>
             </>
