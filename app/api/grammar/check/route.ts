@@ -36,9 +36,17 @@ async function checkGrammar(text: string): Promise<GrammarSuggestion[]> {
 
     // Grammar Rules
     const grammarRules = [
-      // Subject-verb disagreement
+      // Subject-verb disagreement - "there is" with plural nouns
       {
-        pattern: /\b(there|here)\s+is\s+\w+\s+\w+s\b/gi,
+        pattern: /\b(there|here)\s+is\s+\w*s\b/gi,
+        type: "grammar" as const,
+        message: 'Subject-verb disagreement. Use "there are" with plural nouns.',
+        shortMessage: 'Use "there are"',
+        replacement: (match: string) => match.replace(/\b(there|here)\s+is\b/gi, "$1 are"),
+      },
+      // Additional subject-verb cases
+      {
+        pattern: /\b(there|here)\s+is\s+\w+\s+\w*s\b/gi,
         type: "grammar" as const,
         message: 'Subject-verb disagreement. Use "there are" with plural nouns.',
         shortMessage: 'Use "there are"',
@@ -167,7 +175,7 @@ export async function POST(request: NextRequest) {
 
     // Create hash for caching
     const textHash = await createHash(text)
-    const cacheKey = `grammar:${documentId}:${textHash}`
+    const cacheKey = `grammar:v2:${documentId}:${textHash}` // v2 to invalidate old cache
 
     // Check cache first
     try {

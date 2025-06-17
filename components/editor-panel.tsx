@@ -183,7 +183,7 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
   }
 
   return (
-    <div className="relative h-full">
+        <div className="relative h-full">
       <Card className="h-full p-6">
 
         
