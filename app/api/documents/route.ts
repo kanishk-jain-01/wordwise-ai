@@ -30,10 +30,13 @@ export async function POST(request: NextRequest) {
     }
 
     const { title = "Untitled Document", content = "" } = await request.json()
+    
+    // Ensure content is in proper paragraph format for TipTap
+    const properContent = content || '<p></p>'
 
     const [document] = await sql`
       INSERT INTO documents (user_id, title, content, word_count)
-      VALUES (${session.user.id}, ${title}, ${content}, ${content.split(" ").length})
+      VALUES (${session.user.id}, ${title}, ${properContent}, ${properContent.replace(/<[^>]*>/g, "").split(" ").filter(Boolean).length})
       RETURNING *
     `
 
