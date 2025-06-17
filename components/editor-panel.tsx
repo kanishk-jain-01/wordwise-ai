@@ -5,25 +5,30 @@ import StarterKit from "@tiptap/starter-kit"
 import { useEffect, useState, useCallback } from "react"
 import { debounce } from "lodash"
 import type { GrammarSuggestion } from "@/lib/db"
-import { SuggestionTooltip } from "./suggestion-tooltip"
 import { Card } from "@/components/ui/card"
 import { GrammarHighlight, applyGrammarHighlights } from "./grammar-highlight-extension"
+
+export type EditorActions = {
+  applySuggestion: (suggestion: GrammarSuggestion, replacement: string) => void
+  ignoreSuggestion: (suggestion: GrammarSuggestion) => void
+  highlightSuggestion: (suggestion: GrammarSuggestion) => void
+}
 
 type EditorPanelProps = {
   documentId: string
   initialContent: string
   onContentChange: (content: string) => void
   onToneChange: (tone: string) => void
+  onSuggestionsChange?: (suggestions: GrammarSuggestion[]) => void
+  onEditorReady?: (actions: EditorActions) => void
 }
 
-export function EditorPanel({ documentId, initialContent, onContentChange, onToneChange }: EditorPanelProps) {
+export function EditorPanel({ documentId, initialContent, onContentChange, onToneChange, onSuggestionsChange, onEditorReady }: EditorPanelProps) {
   const [suggestions, setSuggestions] = useState<GrammarSuggestion[]>([])
-  const [selectedSuggestion, setSelectedSuggestion] = useState<GrammarSuggestion | null>(null)
-  const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
 
   const editor = useEditor({
     extensions: [StarterKit, GrammarHighlight],
-    content: initialContent || '<p></p>', // Ensure we start with a paragraph, not empty content
+    content: initialContent || '<p></p>',
 
     onUpdate: ({ editor }) => {
       const content = editor.getHTML()
@@ -39,6 +44,7 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
       if (editor) {
         applyGrammarHighlights(editor, [])
       }
+      onSuggestionsChange?.([])
       return
     }
 
@@ -54,6 +60,7 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
         const newSuggestions = data.suggestions || []
         
         setSuggestions(newSuggestions)
+        onSuggestionsChange?.(newSuggestions)
         
         // Apply highlights to editor
         if (editor) {
@@ -89,7 +96,6 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
 
   useEffect(() => {
     if (editor && initialContent !== editor.getHTML()) {
-      // Ensure content is in proper format for grammar highlighting
       const properContent = initialContent || '<p></p>'
       editor.commands.setContent(properContent)
     }
@@ -102,41 +108,8 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
     }
   }, [editor, suggestions])
 
-  const handleTextClick = (event: MouseEvent) => {
-    if (!editor) return
-
-    const pos = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })
-    if (!pos) return
-
-    // Check if click is on a grammar highlight
-    const { doc } = editor.state
-    let clickedSuggestion: GrammarSuggestion | null = null
-
-    doc.nodesBetween(pos.pos, pos.pos + 1, (node, nodePos) => {
-      if (node.isText) {
-        node.marks.forEach(mark => {
-          if (mark.type.name === 'grammarHighlight') {
-            const suggestionId = mark.attrs.id
-            const suggestion = suggestions.find(s => s.id === suggestionId)
-            if (suggestion) {
-              clickedSuggestion = suggestion
-            }
-          }
-        })
-      }
-    })
-
-    if (clickedSuggestion) {
-      const coords = editor.view.coordsAtPos(pos.pos)
-      setTooltipPosition({ x: coords.left, y: coords.top - 10 })
-      setSelectedSuggestion(clickedSuggestion)
-    } else {
-      setSelectedSuggestion(null)
-      setTooltipPosition(null)
-    }
-  }
-
-  const applySuggestion = (suggestion: GrammarSuggestion, replacement: string) => {
+  // Function to apply suggestion (will be called from parent)
+  const applySuggestion = useCallback((suggestion: GrammarSuggestion, replacement: string) => {
     if (!editor) return
 
     // Remove the grammar highlight first
@@ -154,56 +127,67 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
       .run()
 
     // Remove suggestion from state
-    setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id))
-    setSelectedSuggestion(null)
-    setTooltipPosition(null)
-  }
+    const updatedSuggestions = suggestions.filter((s) => s.id !== suggestion.id)
+    setSuggestions(updatedSuggestions)
+    onSuggestionsChange?.(updatedSuggestions)
+  }, [editor, suggestions, onSuggestionsChange])
 
-  const ignoreSuggestion = (suggestion: GrammarSuggestion) => {
+  // Function to ignore suggestion (will be called from parent)
+  const ignoreSuggestion = useCallback((suggestion: GrammarSuggestion) => {
     // Remove the grammar highlight
     if (editor) {
       editor.commands.removeGrammarHighlight(suggestion.id)
     }
     
-    setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id))
-    setSelectedSuggestion(null)
-    setTooltipPosition(null)
-  }
+    const updatedSuggestions = suggestions.filter((s) => s.id !== suggestion.id)
+    setSuggestions(updatedSuggestions)
+    onSuggestionsChange?.(updatedSuggestions)
+  }, [editor, suggestions, onSuggestionsChange])
 
-  useEffect(() => {
-    if (editor) {
-      const editorElement = editor.view.dom
-      editorElement.addEventListener('click', handleTextClick)
-      return () => editorElement.removeEventListener('click', handleTextClick)
+  // Function to highlight suggestion in editor (will be called from parent)
+  const highlightSuggestion = useCallback((suggestion: GrammarSuggestion) => {
+    if (!editor) return
+    
+    // Focus editor and scroll to the suggestion
+    editor.commands.focus()
+    
+    // Set cursor position to the suggestion
+    const from = suggestion.offset
+    const to = suggestion.offset + suggestion.length
+    
+    // Select the text range
+    editor.commands.setTextSelection({ from, to })
+    
+    // Scroll into view
+    const pos = editor.view.coordsAtPos(from)
+    if (pos) {
+      editor.view.dom.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
-  }, [editor, suggestions])
+  }, [editor])
+
+  // Expose editor actions to parent component
+  useEffect(() => {
+    if (editor && onEditorReady) {
+      const actions: EditorActions = {
+        applySuggestion,
+        ignoreSuggestion,
+        highlightSuggestion
+      }
+      onEditorReady(actions)
+    }
+  }, [editor, applySuggestion, ignoreSuggestion, highlightSuggestion, onEditorReady])
 
   if (!editor) {
     return <div>Loading editor...</div>
   }
 
   return (
-        <div className="relative h-full">
+    <div className="relative h-full">
       <Card className="h-full p-6">
-
-        
         <div className="prose prose-sm max-w-none h-full overflow-auto focus-within:outline-none">
           <EditorContent editor={editor} className="h-full min-h-[500px] focus:outline-none" />
         </div>
       </Card>
-
-      {selectedSuggestion && tooltipPosition && (
-        <SuggestionTooltip
-          suggestion={selectedSuggestion}
-          position={tooltipPosition}
-          onApply={(replacement) => applySuggestion(selectedSuggestion, replacement)}
-          onIgnore={() => ignoreSuggestion(selectedSuggestion)}
-          onClose={() => {
-            setSelectedSuggestion(null)
-            setTooltipPosition(null)
-          }}
-        />
-      )}
 
       {/* Grammar highlights styles */}
       <style jsx global>{`
