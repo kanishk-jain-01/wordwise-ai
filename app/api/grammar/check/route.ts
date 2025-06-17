@@ -1,9 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { redis } from "@/lib/redis"
 import type { GrammarSuggestion } from "@/lib/db"
-import crypto from "crypto"
 
 export const runtime = "edge"
+
+// Helper function to generate UUID (Edge Runtime compatible)
+function generateId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+// Helper function to create hash (Edge Runtime compatible)
+async function createHash(text: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 // Enhanced grammar checking function
 async function checkGrammar(text: string): Promise<GrammarSuggestion[]> {
@@ -118,7 +135,7 @@ async function checkGrammar(text: string): Promise<GrammarSuggestion[]> {
         const replacement = typeof rule.replacement === "function" ? rule.replacement(match[0]) : rule.replacement
 
         suggestions.push({
-          id: crypto.randomUUID(),
+          id: generateId(),
           type: rule.type,
           message: rule.message,
           shortMessage: rule.shortMessage,
@@ -149,7 +166,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create hash for caching
-    const textHash = crypto.createHash("md5").update(text).digest("hex")
+    const textHash = await createHash(text)
     const cacheKey = `grammar:${documentId}:${textHash}`
 
     // Check cache first

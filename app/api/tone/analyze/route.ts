@@ -1,6 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { redis } from "@/lib/redis"
-import crypto from "crypto"
+
+// Helper function to create hash (Edge Runtime compatible)
+async function createHash(text: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 // Enhanced tone analysis function
 async function analyzeTone(text: string): Promise<string> {
@@ -227,7 +235,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create hash for caching
-    const textHash = crypto.createHash("md5").update(text).digest("hex")
+    const textHash = await createHash(text)
     const cacheKey = `tone:${documentId}:${textHash}`
 
     // Check cache first
