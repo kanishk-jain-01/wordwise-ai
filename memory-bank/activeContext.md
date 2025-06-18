@@ -5,7 +5,7 @@
 ### Development Status
 - **Stage**: MVP Polish & Bug Fixing
 - **Current Branch**: development
-- **Last Activity**: Fixed critical suggestion highlighting and replacement bugs. Updated Memory Bank.
+- **Last Activity**: Fixed highlight color consistency (editor & right panel) and removed fallback CSS override. Memory Bank updated.
 - **Priority**: Ensuring core feature stability.
 
 ### Recent Discoveries
@@ -14,6 +14,7 @@
 
 ### Recent Fixes
 - **Highlighting & Replacement Accuracy**: Implemented a robust position-mapping system on the frontend. This resolves a series of bugs where suggestion highlights were offset and applying suggestions failed to replace the correct text. The core real-time analysis feature is now significantly more stable.
+- **Color Consistency for Suggestions**: Removed an overriding fallback CSS rule and added attribute-based styling, ensuring grammar (red), spelling (amber), and style (blue) highlights display correctly in the editor. Updated `WritingIssues` panel Tailwind classes to match these colors.
 
 ## Active Features
 
