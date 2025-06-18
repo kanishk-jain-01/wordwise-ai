@@ -50,14 +50,14 @@ app/api/
 - **Migrations**: SQL scripts in `/scripts` directory
 
 ### 3. Real-Time Analysis Pattern
-- **Debouncing**: User input debounced to prevent excessive API calls
-- **Parallel Processing**: Grammar and tone analysis run independently
-- **Caching**: Redis caching for analysis results
-- **Error Handling**: Graceful degradation when services fail
+- **Frontend / Backend Decoupling**: The backend grammar engine operates on plain text for simplicity and performance. The frontend is responsible for translating rich-text editor content into plain text for the API and then mapping the returned suggestion offsets back to the editor's coordinate system.
+- **Position Mapping**: To ensure highlighting and replacements are accurate, the frontend generates a position map on each analysis request. This map links the index of every character in the plain-text string to its corresponding position in the editor's document model (ProseMirror). This is critical because ProseMirror uses a double space (`"  "`) to separate block nodes, causing a divergence from a simple text representation.
+- **Debouncing**: User input is debounced (1000ms for grammar, 2000ms for tone) to prevent excessive API calls during typing.
+- **Caching**: Analysis results for a given piece of text are cached in Redis to provide instantaneous results for repeated checks.
 
 ### 4. Editor Integration Pattern
 - **Editor**: TipTap rich text editor
-- **Extensions**: Custom grammar highlighting extension
+- **Extensions**: Custom grammar highlighting extension (`grammar-highlight-extension.ts`) to visually mark suggestions.
 - **State Management**: React hooks for editor state
 - **Actions**: Exposed editor actions for external control
 

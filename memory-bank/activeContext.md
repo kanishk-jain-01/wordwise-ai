@@ -3,19 +3,17 @@
 ## Current Work Focus
 
 ### Development Status
-- **Stage**: MVP Development Complete
+- **Stage**: MVP Polish & Bug Fixing
 - **Current Branch**: development
-- **Last Activity**: Memory bank initialization
-- **Priority**: Documentation and project organization
+- **Last Activity**: Fixed critical suggestion highlighting and replacement bugs. Updated Memory Bank.
+- **Priority**: Ensuring core feature stability.
 
 ### Recent Discoveries
-- Project has a comprehensive feature set already implemented
-- Grammar engine with custom rule-based system is functional
-- Tone analysis system is in place
-- User authentication and document management working
-- Rich text editor with real-time highlighting implemented
-- Grammar engine upgraded with **dictionary-based spelling checker** (~370 k English words) in addition to existing rule-based patterns
-- Suggestion algorithm improved (first-letter + length heuristic, Levenshtein ≤2)
+- **Position Mapping is Critical**: Discovered that accurate mapping between plain-text character offsets (from the backend) and the TipTap/ProseMirror editor's internal positions is essential for highlighting and replacements to work correctly.
+- **ProseMirror Block Separator**: Learned that ProseMirror's `getText()` method uses a double space (`"  "`) to separate block nodes (e.g., paragraphs), a crucial detail for building an accurate position map.
+
+### Recent Fixes
+- **Highlighting & Replacement Accuracy**: Implemented a robust position-mapping system on the frontend. This resolves a series of bugs where suggestion highlights were offset and applying suggestions failed to replace the correct text. The core real-time analysis feature is now significantly more stable.
 
 ## Active Features
 
@@ -129,12 +127,15 @@
 - Implemented debouncing strategy for real-time features
 - Used serverless architecture for scalability
 - Integrated Redis caching for performance
+- **Adopted a frontend position-mapping pattern** to ensure accurate translation between backend analysis (plain text) and the rich-text editor's coordinate system.
 
 ### Known Issues to Address
 - Need comprehensive error handling for edge cases
-- Performance testing under concurrent users
+- Performance testing under concurrent users, especially for large documents.
 - Mobile responsiveness fine-tuning
 - Accessibility compliance verification
+- The `WritingIssues` panel needs a "scroll-to-suggestion" feature.
+- Undo/redo behavior after applying a suggestion needs refinement.
 
 ### Architecture Considerations
 - Current monolithic structure works for MVP

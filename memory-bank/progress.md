@@ -25,7 +25,7 @@
    - ✅ Real-time content updates
    - ✅ Responsive design
    - ✅ Focus management
-   - ✅ Grammar highlighting system
+   - ✅ Robust grammar highlighting system via position mapping
 
 4. **Grammar Checking System**
    - ✅ Custom rule-based grammar engine
@@ -35,8 +35,8 @@
    - ✅ Error categorization (grammar, spelling, style)
    - ✅ Confidence scoring
    - ✅ Contextual suggestions
-   - ✅ Visual error highlighting
-   - ✅ Apply/ignore suggestion actions
+   - ✅ Visual error highlighting (accurate and stable)
+   - ✅ Apply/ignore suggestion actions (accurate and stable)
 
 5. **Tone Analysis**
    - ✅ Automatic tone detection
@@ -82,11 +82,11 @@
 ## Current Status 📊
 
 ### Application Maturity
-- **MVP Status**: Complete and functional
+- **MVP Status**: Core features are complete and stable.
 - **Feature Completeness**: ~95% of planned MVP features
-- **Code Quality**: Production-ready with TypeScript
+- **Code Quality**: Production-ready with TypeScript and documented patterns.
 - **Testing Coverage**: Manual testing complete, automated tests needed
-- **Documentation**: Basic documentation, comprehensive docs in progress
+- **Documentation**: Core Memory Bank is up-to-date.
 
 ### Performance Metrics
 - **Grammar + Spelling Analysis**: ~1-2 second response time (with dictionary cache)
@@ -97,7 +97,7 @@
 
 ### User Experience
 - **Onboarding**: Simple signup/login flow
-- **Core Workflow**: Intuitive document creation and editing
+- **Core Workflow**: Intuitive document creation, editing, and correction.
 - **Feedback**: Clear visual indicators for all actions
 - **Error Handling**: Graceful degradation and user feedback
 - **Accessibility**: Basic accessibility features implemented
@@ -105,21 +105,17 @@
 ## Known Issues 🔧
 
 ### Minor Issues
-1. **Editor Behavior**
-   - Occasional cursor position issues after applying suggestions
-   - Need better scroll-to-suggestion functionality
-   - Undo/redo behavior with grammar corrections needs refinement
+1. **UI/UX Polish**
+   - Need better scroll-to-suggestion functionality in the `WritingIssues` panel.
+   - Undo/redo behavior after applying a suggestion needs refinement.
+   - Loading states could be more informative.
+   - Error messages need more context.
+   - Mobile responsiveness needs fine-tuning.
+   - Keyboard shortcuts not implemented.
 
-2. **UI/UX Polish**
-   - Loading states could be more informative
-   - Error messages need more context
-   - Mobile responsiveness needs fine-tuning
-   - Keyboard shortcuts not implemented
-
-3. **Performance**
-   - Grammar engine could be optimized for longer texts
-   - Large document handling needs testing
-   - Concurrent user testing not performed
+2. **Performance**
+   - Grammar engine performance on very large documents (>10k words) is untested.
+   - Concurrent user load testing has not been performed.
 
 ### Technical Debt
 1. **Testing**

@@ -67,9 +67,10 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
           offset += text.length
         } else if (node.isBlock) {
           if (offset > 0 && posMap.length < offset + 1) {
-            // Represent paragraph breaks with a space, similar to getText()
-            textParts.push(' ')
-            offset += 1
+            // ProseMirror's getText() uses a double space as a block separator.
+            // We must mimic this to ensure our position map is accurate.
+            textParts.push('  ')
+            offset += 2
           }
         }
       })
