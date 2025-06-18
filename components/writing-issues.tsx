@@ -23,11 +23,11 @@ export function WritingIssues({
   const getIssueIcon = (type: string) => {
     switch (type) {
       case 'grammar':
-        return <AlertCircle className="w-4 h-4 text-red-600" />
+        return <AlertCircle className="w-4 h-4 text-red-500" />
       case 'spelling':
-        return <SpellCheck className="w-4 h-4 text-orange-600" />
+        return <SpellCheck className="w-4 h-4 text-amber-500" />
       case 'style':
-        return <PenTool className="w-4 h-4 text-blue-600" />
+        return <PenTool className="w-4 h-4 text-blue-500" />
       default:
         return <AlertCircle className="w-4 h-4 text-gray-600" />
     }
@@ -38,7 +38,7 @@ export function WritingIssues({
       case 'grammar':
         return 'border-l-red-500'
       case 'spelling':
-        return 'border-l-orange-500'
+        return 'border-l-amber-500'
       case 'style':
         return 'border-l-blue-500'
       default:
