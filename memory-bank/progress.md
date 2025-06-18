@@ -29,6 +29,8 @@
 
 4. **Grammar Checking System**
    - ✅ Custom rule-based grammar engine
+   - ✅ **Dictionary-based spelling checker (~370 k words) integrated**
+   - ✅ Improved suggestion ranking (first-letter + length heuristics)
    - ✅ Real-time grammar analysis
    - ✅ Error categorization (grammar, spelling, style)
    - ✅ Confidence scoring
@@ -87,7 +89,7 @@
 - **Documentation**: Basic documentation, comprehensive docs in progress
 
 ### Performance Metrics
-- **Grammar Analysis**: ~1-2 second response time
+- **Grammar + Spelling Analysis**: ~1-2 second response time (with dictionary cache)
 - **Tone Analysis**: ~1-3 second response time
 - **Auto-save**: 2-second debounce, reliable operation
 - **Page Load**: Fast initial load with Next.js optimization

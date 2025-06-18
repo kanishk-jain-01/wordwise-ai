@@ -14,6 +14,8 @@
 - Tone analysis system is in place
 - User authentication and document management working
 - Rich text editor with real-time highlighting implemented
+- Grammar engine upgraded with **dictionary-based spelling checker** (~370 k English words) in addition to existing rule-based patterns
+- Suggestion algorithm improved (first-letter + length heuristic, Levenshtein ≤2)
 
 ## Active Features
 
@@ -78,8 +80,8 @@
 ### Immediate Actions (High Priority)
 1. **Testing & Quality Assurance**
    - Test all user workflows end-to-end
-   - Verify grammar engine accuracy
-   - Test tone analysis effectiveness
+   - **Regression-test enhanced spelling checker** (accuracy, performance)
+   - Verify grammar engine & tone analysis effectiveness
    - Performance testing under load
 
 2. **Documentation Completion**

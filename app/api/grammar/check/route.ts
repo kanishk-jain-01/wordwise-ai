@@ -3,7 +3,7 @@ import { redis } from "@/lib/redis"
 import type { GrammarSuggestion } from "@/lib/db"
 import { GrammarEngine } from '../rules/grammar-engine'
 
-export const runtime = "edge"
+export const runtime = "nodejs"
 
 // Initialize the grammar engine
 const grammarEngine = new GrammarEngine()

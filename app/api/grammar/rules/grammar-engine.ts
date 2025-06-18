@@ -1,6 +1,7 @@
 import { grammarRules, type GrammarRule } from './grammar-rules'
 import { spellingRules, type SpellingRule } from './spelling-rules'
 import { styleRules, type StyleRule } from './style-rules'
+import { EnhancedSpellingChecker } from './enhanced-spelling'
 
 export type Rule = GrammarRule | SpellingRule | StyleRule
 
@@ -30,18 +31,25 @@ export interface GrammarCheckResult {
     spellingErrors: number
     styleErrors: number
     processingTime: number
+    enhancedSpelling?: {
+      wordsChecked: number
+      ruleBasedErrors: number
+      dictionaryErrors: number
+    }
   }
 }
 
 export class GrammarEngine {
   private allRules: Rule[]
+  private enhancedSpellingChecker: EnhancedSpellingChecker
   
   constructor() {
     this.allRules = [
       ...grammarRules,
-      ...spellingRules,
+      // Remove spelling rules from here - they're handled by enhanced spelling checker
       ...styleRules
     ]
+    this.enhancedSpellingChecker = new EnhancedSpellingChecker()
   }
 
   /**
@@ -51,11 +59,15 @@ export class GrammarEngine {
     const startTime = Date.now()
     const errors: GrammarError[] = []
     
-    // Process each rule
+    // Process grammar and style rules
     for (const rule of this.allRules) {
       const ruleErrors = this.applyRule(text, rule)
       errors.push(...ruleErrors)
     }
+
+    // Process enhanced spelling check
+    const spellingResult = this.enhancedSpellingChecker.checkSpelling(text)
+    errors.push(...spellingResult.errors)
 
     // Sort errors by position
     errors.sort((a, b) => a.offset - b.offset)
@@ -72,7 +84,12 @@ export class GrammarEngine {
         grammarErrors: filteredErrors.filter(e => e.type === 'grammar').length,
         spellingErrors: filteredErrors.filter(e => e.type === 'spelling').length,
         styleErrors: filteredErrors.filter(e => e.type === 'style').length,
-        processingTime
+        processingTime,
+        enhancedSpelling: {
+          wordsChecked: spellingResult.stats.wordsChecked,
+          ruleBasedErrors: spellingResult.stats.ruleBasedErrors,
+          dictionaryErrors: spellingResult.stats.dictionaryErrors
+        }
       }
     }
   }
