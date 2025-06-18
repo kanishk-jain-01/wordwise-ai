@@ -252,12 +252,20 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
           background-color: rgba(59, 130, 246, 0.25) !important;
           border-bottom: 2px wavy #3b82f6 !important;
         }
-        /* Fallback styles with data attributes */
-        span[data-grammar-id] {
+        /* Attribute-based fallback (in case CSS classes are missing) */
+        span[data-grammar-type="grammar"] {
           background-color: rgba(239, 68, 68, 0.25) !important;
           border-bottom: 2px wavy #ef4444 !important;
-          cursor: pointer !important;
         }
+        span[data-grammar-type="spelling"] {
+          background-color: rgba(245, 158, 11, 0.25) !important;
+          border-bottom: 2px wavy #f59e0b !important;
+        }
+        span[data-grammar-type="style"] {
+          background-color: rgba(59, 130, 246, 0.25) !important;
+          border-bottom: 2px wavy #3b82f6 !important;
+        }
+        /* (Removed fallback generic red highlight rule) */
       `}</style>
     </div>
   )
