@@ -1,17 +1,17 @@
 "use client"
 
 import type React from "react"
-import type { GrammarSuggestion } from "@/lib/db"
+import type { Suggestion } from './editor-panel'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, SpellCheck, PenTool, CheckCircle, X } from "lucide-react"
 
 type WritingIssuesProps = {
-  suggestions: GrammarSuggestion[]
-  onApplySuggestion: (suggestion: GrammarSuggestion, replacement: string) => void
-  onIgnoreSuggestion: (suggestion: GrammarSuggestion) => void
-  onHighlightSuggestion: (suggestion: GrammarSuggestion) => void
+  suggestions: Suggestion[]
+  onApplySuggestion: (suggestion: Suggestion, replacement: string) => void
+  onIgnoreSuggestion: (suggestion: Suggestion) => void
+  onHighlightSuggestion: (suggestion: Suggestion) => void
 }
 
 export function WritingIssues({ 

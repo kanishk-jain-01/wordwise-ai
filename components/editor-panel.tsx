@@ -6,12 +6,14 @@ import { useEffect, useState, useCallback } from "react"
 import { debounce } from "lodash"
 import type { GrammarSuggestion } from "@/lib/db"
 import { Card } from "@/components/ui/card"
-import { GrammarHighlight, applyGrammarHighlights } from "./grammar-highlight-extension"
+import { GrammarHighlight, applyGrammarHighlights, clearGrammarHighlights } from "./grammar-highlight-extension"
+
+export type Suggestion = GrammarSuggestion & { from: number; to: number }
 
 export type EditorActions = {
-  applySuggestion: (suggestion: GrammarSuggestion, replacement: string) => void
-  ignoreSuggestion: (suggestion: GrammarSuggestion) => void
-  highlightSuggestion: (suggestion: GrammarSuggestion) => void
+  applySuggestion: (suggestion: Suggestion, replacement: string) => void
+  ignoreSuggestion: (suggestion: Suggestion) => void
+  highlightSuggestion: (suggestion: Suggestion) => void
 }
 
 type EditorPanelProps = {
@@ -19,12 +21,12 @@ type EditorPanelProps = {
   initialContent: string
   onContentChange: (content: string) => void
   onToneChange: (tone: string) => void
-  onSuggestionsChange?: (suggestions: GrammarSuggestion[]) => void
+  onSuggestionsChange?: (suggestions: Suggestion[]) => void
   onEditorReady?: (actions: EditorActions) => void
 }
 
 export function EditorPanel({ documentId, initialContent, onContentChange, onToneChange, onSuggestionsChange, onEditorReady }: EditorPanelProps) {
-  const [suggestions, setSuggestions] = useState<GrammarSuggestion[]>([])
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
 
   const editor = useEditor({
     extensions: [StarterKit, GrammarHighlight],
@@ -39,32 +41,69 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
   })
 
   const checkGrammar = async (text: string) => {
-    if (!text.trim()) {
+    if (!text.trim() || !editor) {
       setSuggestions([])
       if (editor) {
-        applyGrammarHighlights(editor, [])
+        clearGrammarHighlights(editor)
       }
       onSuggestionsChange?.([])
       return
     }
 
     try {
+      // The text from editor.getText() is not the same as the raw text used for offsets.
+      // We must reconstruct the text and a position map to accurately place highlights.
+      const textParts: string[] = []
+      const posMap: number[] = [] // Maps plain text index to ProseMirror position
+      let offset = 0
+
+      editor.state.doc.descendants((node, pos) => {
+        if (node.isText && node.text) {
+          const text = node.text
+          for (let i = 0; i < text.length; i++) {
+            posMap[offset + i] = pos + i
+          }
+          textParts.push(text)
+          offset += text.length
+        } else if (node.isBlock) {
+          if (offset > 0 && posMap.length < offset + 1) {
+            // Represent paragraph breaks with a space, similar to getText()
+            textParts.push(' ')
+            offset += 1
+          }
+        }
+      })
+      const plainText = textParts.join('')
+
       const response = await fetch("/api/grammar/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, documentId }),
+        body: JSON.stringify({ text: plainText, documentId }),
       })
 
       if (response.ok) {
         const data = await response.json()
-        const newSuggestions = data.suggestions || []
+        const rawSuggestions: GrammarSuggestion[] = data.suggestions || []
         
-        setSuggestions(newSuggestions)
-        onSuggestionsChange?.(newSuggestions)
+        // Remap suggestions to include absolute 'from' and 'to' positions for ProseMirror
+        const remappedSuggestions = rawSuggestions.map(s => {
+          const from = posMap[s.offset]
+          const to = from ? from + s.length : undefined
+          
+          if (from === undefined || to === undefined) {
+            console.warn("Could not map suggestion:", s)
+            return null
+          }
+          
+          return { ...s, from, to }
+        }).filter(Boolean) as Suggestion[]
+
+        setSuggestions(remappedSuggestions)
+        onSuggestionsChange?.(remappedSuggestions)
         
         // Apply highlights to editor
         if (editor) {
-          applyGrammarHighlights(editor, newSuggestions)
+          applyGrammarHighlights(editor, remappedSuggestions)
         }
       }
     } catch (error) {
@@ -109,15 +148,14 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
   }, [editor, suggestions])
 
   // Function to apply suggestion (will be called from parent)
-  const applySuggestion = useCallback((suggestion: GrammarSuggestion, replacement: string) => {
+  const applySuggestion = useCallback((suggestion: Suggestion, replacement: string) => {
     if (!editor) return
 
     // Remove the grammar highlight first
     editor.commands.removeGrammarHighlight(suggestion.id)
     
-    // Apply the replacement
-    const from = suggestion.offset
-    const to = suggestion.offset + suggestion.length
+    // Apply the replacement using the accurate 'from' and 'to' positions
+    const { from, to } = suggestion
     
     editor
       .chain()
@@ -133,7 +171,7 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
   }, [editor, suggestions, onSuggestionsChange])
 
   // Function to ignore suggestion (will be called from parent)
-  const ignoreSuggestion = useCallback((suggestion: GrammarSuggestion) => {
+  const ignoreSuggestion = useCallback((suggestion: Suggestion) => {
     // Remove the grammar highlight
     if (editor) {
       editor.commands.removeGrammarHighlight(suggestion.id)
@@ -145,15 +183,14 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
   }, [editor, suggestions, onSuggestionsChange])
 
   // Function to highlight suggestion in editor (will be called from parent)
-  const highlightSuggestion = useCallback((suggestion: GrammarSuggestion) => {
+  const highlightSuggestion = useCallback((suggestion: Suggestion) => {
     if (!editor) return
     
     // Focus editor and scroll to the suggestion
     editor.commands.focus()
     
-    // Set cursor position to the suggestion
-    const from = suggestion.offset
-    const to = suggestion.offset + suggestion.length
+    // Set cursor position to the suggestion using accurate 'from' and 'to'
+    const { from, to } = suggestion
     
     // Select the text range
     editor.commands.setTextSelection({ from, to })

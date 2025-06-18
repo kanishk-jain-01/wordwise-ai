@@ -116,8 +116,8 @@ export const GrammarHighlight = Mark.create<GrammarHighlightOptions>({
 })
 
 // Helper function to apply grammar highlights to editor
-export function applyGrammarHighlights(editor: any, suggestions: GrammarSuggestion[]) {
-  if (!editor) return
+export function applyGrammarHighlights(editor: any, suggestions: (GrammarSuggestion & { from: number, to: number })[]) {
+  if (!editor || !suggestions.length) return
 
   const { state } = editor
   const { doc } = state
@@ -127,29 +127,22 @@ export function applyGrammarHighlights(editor: any, suggestions: GrammarSuggesti
   
   // First, clear all existing grammar highlights
   doc.descendants((node: any, pos: number) => {
-    if (node.isText) {
-      node.marks.forEach((mark: any) => {
-        if (mark.type.name === 'grammarHighlight') {
-          tr = tr.removeMark(pos, pos + node.nodeSize, mark.type)
-        }
-      })
-    }
+    node.marks.forEach((mark: any) => {
+      if (mark.type.name === 'grammarHighlight') {
+        tr = tr.removeMark(pos, pos + node.nodeSize, mark.type)
+      }
+    })
   })
 
   // Apply new highlights
   suggestions.forEach(suggestion => {
-    const from = suggestion.offset
-    const to = suggestion.offset + suggestion.length
+    const { from, to, id, type } = suggestion
 
     // Ensure the range is valid and within document bounds
-    if (from >= 0 && to <= doc.content.size && from < to && from < doc.content.size) {
+    if (from >= 0 && to <= doc.content.size && from < to) {
       try {
-        const mark = state.schema.marks.grammarHighlight.create({
-          id: suggestion.id,
-          type: suggestion.type,
-        })
-        
-        tr = tr.addMark(from, Math.min(to, doc.content.size), mark)
+        const mark = state.schema.marks.grammarHighlight.create({ id, type })
+        tr = tr.addMark(from, to, mark)
       } catch (error) {
         console.warn('Failed to apply grammar highlight:', error, { from, to, suggestion })
       }
@@ -157,7 +150,28 @@ export function applyGrammarHighlights(editor: any, suggestions: GrammarSuggesti
   })
 
   // Dispatch the transaction if there are changes
-  if (tr.steps.length > 0) {
+  if (tr.docChanged || tr.steps.length > 0) {
+    editor.view.dispatch(tr)
+  }
+}
+
+// Helper function to clear all highlights efficiently
+export function clearGrammarHighlights(editor: any) {
+  if (!editor) return
+
+  const { state } = editor
+  const { doc } = state
+  let tr = state.tr
+  
+  // Find all grammarHighlight marks and remove them
+  doc.descendants((node: any, pos: number) => {
+    const highlightMark = node.marks.find((mark: any) => mark.type.name === 'grammarHighlight')
+    if (highlightMark) {
+      tr = tr.removeMark(pos, pos + node.nodeSize, highlightMark.type)
+    }
+  })
+  
+  if (tr.docChanged || tr.steps.length > 0) {
     editor.view.dispatch(tr)
   }
 } 

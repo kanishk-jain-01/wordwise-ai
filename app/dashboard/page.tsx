@@ -3,11 +3,10 @@
 import { useState, useEffect, useCallback } from "react"
 import type { Document } from "@/lib/db"
 import { DocumentSidebar } from "@/components/document-sidebar"
-import { EditorPanel, type EditorActions } from "@/components/editor-panel"
+import { EditorPanel, type EditorActions, type Suggestion } from "@/components/editor-panel"
 import { ToneIndicator } from "@/components/tone-indicator"
 import { WritingIssues } from "@/components/writing-issues"
 import { ProtectedRoute } from "@/components/protected-route"
-import type { GrammarSuggestion } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,7 +20,7 @@ export default function DashboardPage() {
   const [documentTitle, setDocumentTitle] = useState("")
   const [documentContent, setDocumentContent] = useState("")
   const [documentTone, setDocumentTone] = useState<string | null>(null)
-  const [suggestions, setSuggestions] = useState<GrammarSuggestion[]>([])
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [editorActions, setEditorActions] = useState<EditorActions | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -148,19 +147,19 @@ export default function DashboardPage() {
   }, [documentTitle, documentContent, documentTone, selectedDocument, debouncedSave])
 
   // Handle writing issues actions
-  const handleApplySuggestion = (suggestion: GrammarSuggestion, replacement: string) => {
+  const handleApplySuggestion = (suggestion: Suggestion, replacement: string) => {
     if (editorActions) {
       editorActions.applySuggestion(suggestion, replacement)
     }
   }
 
-  const handleIgnoreSuggestion = (suggestion: GrammarSuggestion) => {
+  const handleIgnoreSuggestion = (suggestion: Suggestion) => {
     if (editorActions) {
       editorActions.ignoreSuggestion(suggestion)
     }
   }
 
-  const handleHighlightSuggestion = (suggestion: GrammarSuggestion) => {
+  const handleHighlightSuggestion = (suggestion: Suggestion) => {
     if (editorActions) {
       editorActions.highlightSuggestion(suggestion)
     }
