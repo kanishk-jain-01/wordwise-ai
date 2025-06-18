@@ -155,7 +155,7 @@ A web-based writing assistant that provides:
 
 ### 4.6 Development Tools
 
-* Package Manager: pnpm
+* Package Manager: npm
 * Linting: ESLint + Prettier
 * Type Checking: TypeScript
 * Version Control: Git + GitHub
