@@ -61,6 +61,16 @@ app/api/
 - **State Management**: React hooks for editor state
 - **Actions**: Exposed editor actions for external control
 
+### 5. Decoration-Based Highlight Pattern (NEW)
+- **Problem**: Mark-based highlights mutated the document, triggering extra `onUpdate` cycles, causing flicker and incorrect suggestion clearing.
+- **Solution**: Use a dedicated TipTap `Extension` that manages a ProseMirror `DecorationSet` keyed by a plugin. Decorations are applied by passing suggestion arrays via transaction metadata. Because decorations are external to the document state, they do not trigger `onUpdate`, maintaining stability and performance.
+- **Implementation**: `components/grammar-highlight-extension.ts` defines the plugin with `grammarHighlightKey`; helper functions `applyGrammarHighlights` and `clearGrammarHighlights` dispatch transactions carrying suggestion data.
+- **Benefits**:
+  * No document mutation → eliminates highlight-induced loops.
+  * Offsets automatically remapped via transaction mapping.
+  * Simpler removal/refresh logic; decorations removed when suggestions array emptied.
+- **Considerations**: Offset mapping must include two-space block separators to stay aligned with backend analysis.
+
 ## Component Relationships
 
 ### Core Components

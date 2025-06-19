@@ -37,6 +37,7 @@
    - ✅ Contextual suggestions
    - ✅ Visual error highlighting (accurate and stable)
    - ✅ Apply/ignore suggestion actions (accurate and stable)
+   - ✅ DecorationSet-based highlights eliminate flicker and maintain state after edits
 
 5. **Tone Analysis**
    - ✅ Automatic tone detection
@@ -113,6 +114,7 @@
    - Error messages need more context.
    - Mobile responsiveness needs fine-tuning.
    - Keyboard shortcuts not implemented.
+   - (Resolved) Suggestion highlight flicker/disappear issues.
 
 2. **Performance**
    - Grammar engine performance on very large documents (>10k words) is untested.

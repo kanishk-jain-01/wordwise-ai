@@ -5,16 +5,21 @@
 ### Development Status
 - **Stage**: MVP Polish & Bug Fixing
 - **Current Branch**: development
-- **Last Activity**: Fixed highlight color consistency (editor & right panel) and removed fallback CSS override. Memory Bank updated.
+- **Last Activity**: Refactored grammar highlighting to DecorationSet (no document mutation), added initial analysis on editor creation, ensured suggestions persist after apply/ignore, and fixed offset mapping for block separators. Memory Bank updated.
 - **Priority**: Ensuring core feature stability.
 
 ### Recent Discoveries
-- **Position Mapping is Critical**: Discovered that accurate mapping between plain-text character offsets (from the backend) and the TipTap/ProseMirror editor's internal positions is essential for highlighting and replacements to work correctly.
-- **ProseMirror Block Separator**: Learned that ProseMirror's `getText()` method uses a double space (`"  "`) to separate block nodes (e.g., paragraphs), a crucial detail for building an accurate position map.
+- **Decoration vs. Mark for Highlights**: Using ProseMirror Decorations avoids unwanted `onUpdate` events and eliminates suggestion flicker compared to mark-based highlighting.
+- **Position Mapping is Critical**: Accurate mapping between backend plain-text offsets and ProseMirror positions remains central.
+- **ProseMirror Block Separator Handling**: Two-space block separators must be represented in both the plain text and the position map to keep offsets aligned.
 
 ### Recent Fixes
-- **Highlighting & Replacement Accuracy**: Implemented a robust position-mapping system on the frontend. This resolves a series of bugs where suggestion highlights were offset and applying suggestions failed to replace the correct text. The core real-time analysis feature is now significantly more stable.
-- **Color Consistency for Suggestions**: Removed an overriding fallback CSS rule and added attribute-based styling, ensuring grammar (red), spelling (amber), and style (blue) highlights display correctly in the editor. Updated `WritingIssues` panel Tailwind classes to match these colors.
+- **Decoration-Based Highlighting**: Replaced mark-based grammar highlights with a DecorationSet plugin, removing document mutations and flicker.
+- **Suggestion Persistence**: Added cancel logic for pending debounced checks and reran analysis after apply/ignore so suggestions no longer disappear.
+- **Document Isolation**: `EditorPanel` now remounts per `documentId` (`key` prop) ensuring each doc has isolated state.
+- **Initial Analysis**: Leveraged TipTap `onCreate` hook to trigger an immediate grammar/tone check on load.
+- **Offset Mapping Refinement**: Rebuilt position map with `doc.textBetween` and explicit mapping of two-space separators, fixing disappearing suggestions while typing.
+- **Color Consistency for Suggestions**: (earlier) styling tweaks remain effective.
 
 ## Active Features
 

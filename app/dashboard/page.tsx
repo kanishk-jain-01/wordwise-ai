@@ -230,6 +230,7 @@ export default function DashboardPage() {
               <div className="flex-1 flex">
                 <div className="flex-1 p-4">
                   <EditorPanel
+                    key={selectedDocument.id}
                     documentId={selectedDocument.id}
                     initialContent={documentContent}
                     onContentChange={setDocumentContent}

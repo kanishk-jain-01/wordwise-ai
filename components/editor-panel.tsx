@@ -32,6 +32,13 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
     extensions: [StarterKit, GrammarHighlight],
     content: initialContent || '<p></p>',
 
+    // Initial analysis when the editor is first created
+    onCreate: ({ editor }) => {
+      const text = editor.getText()
+      checkGrammar(text) // immediate, non-debounced
+      analyzeTone(text)
+    },
+
     onUpdate: ({ editor }) => {
       const content = editor.getHTML()
       onContentChange(content)
@@ -51,30 +58,27 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
     }
 
     try {
-      // The text from editor.getText() is not the same as the raw text used for offsets.
-      // We must reconstruct the text and a position map to accurately place highlights.
-      const textParts: string[] = []
-      const posMap: number[] = [] // Maps plain text index to ProseMirror position
-      let offset = 0
+      // Build plain text representation using ProseMirror's helper and create a position map
+      const { doc } = editor.state
 
-      editor.state.doc.descendants((node, pos) => {
+      // `textBetween` with block separator of two spaces matches ProseMirror's default for `getText()`
+      const plainText = doc.textBetween(0, doc.content.size, '  ')
+
+      // Build mapping from plain-text index -> ProseMirror position
+      const posMap: number[] = []
+      let currentIndex = 0
+
+      doc.descendants((node, pos) => {
         if (node.isText && node.text) {
-          const text = node.text
-          for (let i = 0; i < text.length; i++) {
-            posMap[offset + i] = pos + i
+          for (let i = 0; i < node.text.length; i++) {
+            posMap[currentIndex++] = pos + i
           }
-          textParts.push(text)
-          offset += text.length
-        } else if (node.isBlock) {
-          if (offset > 0 && posMap.length < offset + 1) {
-            // ProseMirror's getText() uses a double space as a block separator.
-            // We must mimic this to ensure our position map is accurate.
-            textParts.push('  ')
-            offset += 2
-          }
+        } else if (node.isBlock && currentIndex > 0) {
+          // Two-space block separator – map both spaces to the boundary position
+          posMap[currentIndex++] = pos
+          posMap[currentIndex++] = pos
         }
       })
-      const plainText = textParts.join('')
 
       const response = await fetch("/api/grammar/check", {
         method: "POST",
@@ -152,9 +156,6 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
   const applySuggestion = useCallback((suggestion: Suggestion, replacement: string) => {
     if (!editor) return
 
-    // Remove the grammar highlight first
-    editor.commands.removeGrammarHighlight(suggestion.id)
-    
     // Apply the replacement using the accurate 'from' and 'to' positions
     const { from, to } = suggestion
     
@@ -165,23 +166,42 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
       .insertContentAt(from, replacement)
       .run()
 
-    // Remove suggestion from state
+    // Highlights will be refreshed after we update suggestions below
     const updatedSuggestions = suggestions.filter((s) => s.id !== suggestion.id)
     setSuggestions(updatedSuggestions)
     onSuggestionsChange?.(updatedSuggestions)
-  }, [editor, suggestions, onSuggestionsChange])
+
+    if (editor) {
+      applyGrammarHighlights(editor, updatedSuggestions)
+
+      // Cancel any pending debounced checks to prevent stale overwrite
+      debouncedCheckGrammar.cancel()
+      debouncedAnalyzeTone.cancel()
+
+      // Re-run analysis to get fresh suggestions after content change
+      checkGrammar(editor.getText())
+      analyzeTone(editor.getText())
+    }
+  }, [editor, suggestions, onSuggestionsChange, debouncedCheckGrammar, debouncedAnalyzeTone])
 
   // Function to ignore suggestion (will be called from parent)
   const ignoreSuggestion = useCallback((suggestion: Suggestion) => {
-    // Remove the grammar highlight
-    if (editor) {
-      editor.commands.removeGrammarHighlight(suggestion.id)
-    }
-    
+    // Highlights will be refreshed after we update suggestions below
     const updatedSuggestions = suggestions.filter((s) => s.id !== suggestion.id)
     setSuggestions(updatedSuggestions)
     onSuggestionsChange?.(updatedSuggestions)
-  }, [editor, suggestions, onSuggestionsChange])
+
+    if (editor) {
+      applyGrammarHighlights(editor, updatedSuggestions)
+
+      // Cancel pending debounced checks before immediate refresh
+      debouncedCheckGrammar.cancel()
+      debouncedAnalyzeTone.cancel()
+
+      checkGrammar(editor.getText())
+      analyzeTone(editor.getText())
+    }
+  }, [editor, suggestions, onSuggestionsChange, debouncedCheckGrammar, debouncedAnalyzeTone])
 
   // Function to highlight suggestion in editor (will be called from parent)
   const highlightSuggestion = useCallback((suggestion: Suggestion) => {
