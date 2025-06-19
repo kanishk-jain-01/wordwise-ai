@@ -5,13 +5,14 @@
 ### Development Status
 - **Stage**: MVP Polish & Bug Fixing
 - **Current Branch**: development
-- **Last Activity**: Refactored grammar highlighting to DecorationSet (no document mutation), added initial analysis on editor creation, ensured suggestions persist after apply/ignore, and fixed offset mapping for block separators. Memory Bank updated.
-- **Priority**: Ensuring core feature stability.
+- **Last Activity**: Fixed critical stale closure bug in debounced grammar checking that prevented real-time analysis from working when typing new content. Implemented ref-based pattern for stable function references.
+- **Priority**: Ensuring core feature stability and production readiness.
 
 ### Recent Discoveries
 - **Decoration vs. Mark for Highlights**: Using ProseMirror Decorations avoids unwanted `onUpdate` events and eliminates suggestion flicker compared to mark-based highlighting.
 - **Position Mapping is Critical**: Accurate mapping between backend plain-text offsets and ProseMirror positions remains central.
 - **ProseMirror Block Separator Handling**: Two-space block separators must be represented in both the plain text and the position map to keep offsets aligned.
+- **Stale Closure Pattern in React**: Debounced functions with `useCallback` can capture stale closures when dependencies are missing. Using refs to maintain current function references solves this while preserving debounce behavior.
 
 ### Recent Fixes
 - **Decoration-Based Highlighting**: Replaced mark-based grammar highlights with a DecorationSet plugin, removing document mutations and flicker.
@@ -19,6 +20,7 @@
 - **Document Isolation**: `EditorPanel` now remounts per `documentId` (`key` prop) ensuring each doc has isolated state.
 - **Initial Analysis**: Leveraged TipTap `onCreate` hook to trigger an immediate grammar/tone check on load.
 - **Offset Mapping Refinement**: Rebuilt position map with `doc.textBetween` and explicit mapping of two-space separators, fixing disappearing suggestions while typing.
+- **CRITICAL: Stale Closure Bug Fix**: Fixed debounced grammar checking that stopped working when typing new content. Problem was `useCallback` dependencies missing `checkGrammar` and `analyzeTone` functions, causing stale closures. Solution: Use refs (`checkGrammarRef`, `analyzeToneRef`) to maintain current function references while keeping stable debounced functions.
 - **Color Consistency for Suggestions**: (earlier) styling tweaks remain effective.
 
 ## Active Features
@@ -142,6 +144,7 @@
 - Accessibility compliance verification
 - The `WritingIssues` panel needs a "scroll-to-suggestion" feature.
 - Undo/redo behavior after applying a suggestion needs refinement.
+- ~~Grammar checking stops working when typing new content~~ ✅ **FIXED** - Stale closure bug resolved
 
 ### Architecture Considerations
 - Current monolithic structure works for MVP

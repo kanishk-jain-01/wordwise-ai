@@ -85,10 +85,11 @@
 
 ### Application Maturity
 - **MVP Status**: Core features are complete and stable.
-- **Feature Completeness**: ~95% of planned MVP features
+- **Feature Completeness**: ~98% of planned MVP features
 - **Code Quality**: Production-ready with TypeScript and documented patterns.
 - **Testing Coverage**: Manual testing complete, automated tests needed
 - **Documentation**: Core Memory Bank is up-to-date.
+- **Critical Bug Status**: Major real-time grammar checking issue resolved ✅
 
 ### Performance Metrics
 - **Grammar + Spelling Analysis**: ~1-2 second response time (with dictionary cache)
@@ -114,7 +115,8 @@
    - Error messages need more context.
    - Mobile responsiveness needs fine-tuning.
    - Keyboard shortcuts not implemented.
-   - (Resolved) Suggestion highlight flicker/disappear issues.
+   - ✅ (Resolved) Suggestion highlight flicker/disappear issues.
+   - ✅ (Resolved) Grammar checking stops working when typing new content.
 
 2. **Performance**
    - Grammar engine performance on very large documents (>10k words) is untested.

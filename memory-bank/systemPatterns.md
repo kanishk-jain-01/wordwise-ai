@@ -71,6 +71,25 @@ app/api/
   * Simpler removal/refresh logic; decorations removed when suggestions array emptied.
 - **Considerations**: Offset mapping must include two-space block separators to stay aligned with backend analysis.
 
+### 6. Ref-Based Debounce Pattern (CRITICAL)
+- **Problem**: `useCallback` with debounced functions can capture stale closures when function dependencies change on every render, causing debounced callbacks to use outdated references.
+- **Symptom**: Grammar checking stops working when typing new content because debounced functions reference stale `editor` instances or other state.
+- **Solution**: Use `useRef` to maintain current function references while keeping stable debounced functions:
+  ```typescript
+  const checkGrammarRef = useRef<(text: string) => Promise<void>>()
+  checkGrammarRef.current = checkGrammar // Update on every render
+  
+  const debouncedCheckGrammar = useCallback(
+    debounce((text: string) => checkGrammarRef.current?.(text), 1000),
+    [documentId] // Only recreate when documentId changes
+  )
+  ```
+- **Benefits**:
+  * Preserves debounce behavior (functions only recreated when truly needed)
+  * Always calls current function version (no stale closures)
+  * Maintains performance (avoids excessive debounce recreation)
+- **Implementation**: `components/editor-panel.tsx` uses this pattern for both `checkGrammar` and `analyzeTone` debounced functions.
+
 ## Component Relationships
 
 ### Core Components

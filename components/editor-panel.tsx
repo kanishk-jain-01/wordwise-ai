@@ -2,7 +2,7 @@
 
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { debounce } from "lodash"
 import type { GrammarSuggestion } from "@/lib/db"
 import { Card } from "@/components/ui/card"
@@ -27,6 +27,10 @@ type EditorPanelProps = {
 
 export function EditorPanel({ documentId, initialContent, onContentChange, onToneChange, onSuggestionsChange, onEditorReady }: EditorPanelProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  
+  // Refs to hold the latest function references
+  const checkGrammarRef = useRef<(text: string) => Promise<void>>()
+  const analyzeToneRef = useRef<(text: string) => Promise<void>>()
 
   const editor = useEditor({
     extensions: [StarterKit, GrammarHighlight],
@@ -135,8 +139,19 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
     }
   }
 
-  const debouncedCheckGrammar = useCallback(debounce(checkGrammar, 1000), [documentId])
-  const debouncedAnalyzeTone = useCallback(debounce(analyzeTone, 2000), [documentId])
+  // Update refs with latest functions
+  checkGrammarRef.current = checkGrammar
+  analyzeToneRef.current = analyzeTone
+
+  // Create stable debounced functions that use the refs
+  const debouncedCheckGrammar = useCallback(
+    debounce((text: string) => checkGrammarRef.current?.(text), 1000),
+    [documentId]
+  )
+  const debouncedAnalyzeTone = useCallback(
+    debounce((text: string) => analyzeToneRef.current?.(text), 2000),
+    [documentId]
+  )
 
   useEffect(() => {
     if (editor && initialContent !== editor.getHTML()) {
