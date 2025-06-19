@@ -158,7 +158,7 @@ export function WritingIssues({
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-6 px-2 text-xs"
+                        className="h-6 px-2 text-xs hover:bg-gray-100 hover:text-gray-900"
                         onClick={(e) => {
                           e.stopPropagation()
                           onIgnoreSuggestion(suggestion)
@@ -177,7 +177,7 @@ export function WritingIssues({
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-6 px-2 text-xs"
+                      className="h-6 px-2 text-xs hover:bg-gray-100 hover:text-gray-900"
                       onClick={(e) => {
                         e.stopPropagation()
                         onIgnoreSuggestion(suggestion)

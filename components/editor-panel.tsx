@@ -4,9 +4,10 @@ import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import { useEffect, useState, useCallback, useRef } from "react"
 import { debounce } from "lodash"
-import type { GrammarSuggestion } from "@/lib/db"
+import type { GrammarSuggestion, IgnoredSuggestion } from "@/lib/db"
 import { Card } from "@/components/ui/card"
 import { GrammarHighlight, applyGrammarHighlights, clearGrammarHighlights } from "./grammar-highlight-extension"
+import { filterIgnoredSuggestions, createIgnoredSuggestionData } from "@/lib/ignore-matcher"
 
 export type Suggestion = GrammarSuggestion & { from: number; to: number }
 
@@ -27,6 +28,7 @@ type EditorPanelProps = {
 
 export function EditorPanel({ documentId, initialContent, onContentChange, onToneChange, onSuggestionsChange, onEditorReady }: EditorPanelProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [ignoredSuggestions, setIgnoredSuggestions] = useState<IgnoredSuggestion[]>([])
   
   // Refs to hold the latest function references
   const checkGrammarRef = useRef<((text: string) => Promise<void>) | undefined>(undefined)
@@ -50,6 +52,19 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
       debouncedAnalyzeTone(editor.getText())
     },
   })
+
+  // Load ignored suggestions for this document
+  const loadIgnoredSuggestions = async () => {
+    try {
+      const response = await fetch(`/api/suggestions/ignore?documentId=${documentId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setIgnoredSuggestions(data.ignoredSuggestions || [])
+      }
+    } catch (error) {
+      console.error("Failed to load ignored suggestions:", error)
+    }
+  }
 
   const checkGrammar = async (text: string) => {
     if (!text.trim() || !editor) {
@@ -107,12 +122,15 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
           return { ...s, from, to }
         }).filter(Boolean) as Suggestion[]
 
-        setSuggestions(remappedSuggestions)
-        onSuggestionsChange?.(remappedSuggestions)
+        // Filter out ignored suggestions
+        const filteredSuggestions = filterIgnoredSuggestions(remappedSuggestions, plainText, ignoredSuggestions)
+
+        setSuggestions(filteredSuggestions)
+        onSuggestionsChange?.(filteredSuggestions)
         
         // Apply highlights to editor
         if (editor) {
-          applyGrammarHighlights(editor, remappedSuggestions)
+          applyGrammarHighlights(editor, filteredSuggestions)
         }
       }
     } catch (error) {
@@ -160,6 +178,13 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
     }
   }, [initialContent, editor])
 
+  // Load ignored suggestions when document changes
+  useEffect(() => {
+    if (documentId) {
+      loadIgnoredSuggestions()
+    }
+  }, [documentId])
+
   // Apply highlights when suggestions change
   useEffect(() => {
     if (editor && suggestions.length > 0) {
@@ -200,23 +225,54 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
   }, [editor, suggestions, onSuggestionsChange, debouncedCheckGrammar, debouncedAnalyzeTone])
 
   // Function to ignore suggestion (will be called from parent)
-  const ignoreSuggestion = useCallback((suggestion: Suggestion) => {
-    // Highlights will be refreshed after we update suggestions below
-    const updatedSuggestions = suggestions.filter((s) => s.id !== suggestion.id)
-    setSuggestions(updatedSuggestions)
-    onSuggestionsChange?.(updatedSuggestions)
+  const ignoreSuggestion = useCallback(async (suggestion: Suggestion) => {
+    if (!editor) return
 
-    if (editor) {
-      applyGrammarHighlights(editor, updatedSuggestions)
+    try {
+      // Get the current text for context extraction
+      const plainText = editor.state.doc.textBetween(0, editor.state.doc.content.size, '  ')
+      
+      // Create ignored suggestion data
+      const ignoredData = createIgnoredSuggestionData(suggestion, plainText, documentId)
+      
+      // Save to backend
+      const response = await fetch('/api/suggestions/ignore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentId: ignoredData.document_id,
+          originalText: ignoredData.original_text,
+          suggestionType: ignoredData.suggestion_type,
+          ruleId: ignoredData.rule_id,
+          positionStart: ignoredData.position_start,
+          positionEnd: ignoredData.position_end,
+          contextBefore: ignoredData.context_before,
+          contextAfter: ignoredData.context_after,
+        }),
+      })
 
-      // Cancel pending debounced checks before immediate refresh
-      debouncedCheckGrammar.cancel()
-      debouncedAnalyzeTone.cancel()
+      if (response.ok) {
+        const data = await response.json()
+        if (data.ignored) {
+          // Add to local ignored list
+          setIgnoredSuggestions(prev => [...prev, data.ignored])
+        }
+        
+        // Remove from current suggestions immediately
+        const updatedSuggestions = suggestions.filter((s) => s.id !== suggestion.id)
+        setSuggestions(updatedSuggestions)
+        onSuggestionsChange?.(updatedSuggestions)
 
-      checkGrammar(editor.getText())
-      analyzeTone(editor.getText())
+        if (editor) {
+          applyGrammarHighlights(editor, updatedSuggestions)
+        }
+      } else {
+        console.error('Failed to ignore suggestion:', await response.text())
+      }
+    } catch (error) {
+      console.error('Error ignoring suggestion:', error)
     }
-  }, [editor, suggestions, onSuggestionsChange, debouncedCheckGrammar, debouncedAnalyzeTone])
+  }, [editor, suggestions, onSuggestionsChange, documentId])
 
   // Function to highlight suggestion in editor (will be called from parent)
   const highlightSuggestion = useCallback((suggestion: Suggestion) => {
