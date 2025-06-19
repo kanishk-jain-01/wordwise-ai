@@ -1,0 +1,155 @@
+# Task List: Robust Style Suggestions Enhancement
+
+## Relevant Files
+
+- `app/api/grammar/rules/style-rules.ts` - Contains current style rules that need context-aware improvements
+- `app/api/grammar/rules/grammar-engine.ts` - Main engine that processes rules and needs validation pipeline
+- `app/api/grammar/rules/enhanced-spelling.ts` - Reference for multi-stage suggestion approach
+- `app/api/grammar/rules/context-aware-style-rules.ts` - New context-aware style rules implementation
+- `app/api/grammar/rules/enhanced-style-processor.ts` - Enhanced style processor with validation
+- `app/api/grammar/rules/context-aware-rule-selector.ts` - Rule selector for gradual migration
+- `lib/grammar-context.ts` - New utility for sentence boundary detection and context analysis
+- `lib/grammar-validation.ts` - New validation functions for suggestion quality checking  
+- `lib/linguistic-helpers.ts` - New utility functions for grammatical agreement and POS detection
+- `app/api/grammar/check/route.ts` - API route that may need confidence filtering updates
+- `components/writing-issues.tsx` - UI component that displays suggestions and may need risk indicators
+
+### Notes
+
+- Focus on maintaining backward compatibility while adding new context-aware features
+- Implement changes incrementally to avoid breaking existing functionality
+- Use existing enhanced spelling engine patterns as reference for multi-stage analysis
+- Consider performance impact of additional context analysis on real-time suggestions
+
+## Tasks
+
+- [x] 1.0 Implement Core Context Analysis Infrastructure
+  - [x] 1.1 Create sentence boundary detection utility functions
+    - [x] 1.1.1 Implement regex-based sentence splitting with proper handling of abbreviations
+    - [x] 1.1.2 Add support for detecting sentence fragments vs complete sentences
+    - [x] 1.1.3 Handle edge cases like ellipses, multiple punctuation marks, and dialogue
+    - [x] 1.1.4 Create function to determine if a position is at sentence start/middle/end
+  - [x] 1.2 Build context extraction system for surrounding text analysis
+    - [x] 1.2.1 Create function to extract N words before/after a given position
+    - [x] 1.2.2 Implement context window extraction with configurable sizes
+    - [x] 1.2.3 Add paragraph boundary detection for broader context
+    - [x] 1.2.4 Build context metadata structure (sentence position, paragraph info, etc.)
+  - [x] 1.3 Implement position-aware context mapping (start/middle/end of sentence)
+    - [x] 1.3.1 Create SentencePosition enum (START, MIDDLE, END, STANDALONE)
+    - [x] 1.3.2 Implement function to map text offset to sentence position
+    - [x] 1.3.3 Add sentence boundary caching for performance optimization
+    - [x] 1.3.4 Handle multi-sentence selections and overlapping contexts
+  - [x] 1.4 Add sentence completeness validation functions
+    - [x] 1.4.1 Create function to validate if text forms complete sentences
+    - [x] 1.4.2 Implement basic grammatical completeness checking (subject-verb detection)
+    - [x] 1.4.3 Add validation for sentence fragments and run-on sentences
+    - [x] 1.4.4 Create sentence reconstruction validator for replacements
+
+- [x] 2.0 Build Suggestion Validation Pipeline  
+  - [x] 2.1 Implement pre-flight grammar validation for replacements
+    - [x] 2.1.1 Create function to test replacement text in original context
+    - [x] 2.1.2 Implement basic grammatical agreement checking (subject-verb, noun-adjective)
+    - [x] 2.1.3 Add validation for common grammatical patterns and violations
+    - [x] 2.1.4 Create whitelist/blacklist system for known good/bad replacements
+  - [x] 2.2 Create sentence reconstruction testing (original → replacement validation)
+    - [x] 2.2.1 Build function to reconstruct full sentences with replacements
+    - [x] 2.2.2 Implement sentence flow validation (does replacement maintain meaning?)
+    - [x] 2.2.3 Add punctuation and capitalization consistency checking
+    - [x] 2.2.4 Create before/after comparison system for quality assessment
+  - [x] 2.3 Build confidence adjustment system based on context quality
+    - [x] 2.3.1 Implement context quality scoring algorithm
+    - [x] 2.3.2 Create confidence penalty system for risky contexts
+    - [x] 2.3.3 Add confidence boost for high-certainty scenarios
+    - [x] 2.3.4 Implement adaptive thresholds based on suggestion type
+  - [x] 2.4 Add suggestion risk categorization (SAFE/MODERATE/RISKY)
+    - [x] 2.4.1 Create SuggestionRisk enum and classification logic
+    - [x] 2.4.2 Implement risk assessment based on context analysis
+    - [x] 2.4.3 Add risk-based filtering and display logic
+    - [x] 2.4.4 Create risk escalation system for uncertain cases
+  - [x] 2.5 Implement validation result caching for performance
+    - [x] 2.5.1 Create validation result cache structure and storage
+    - [x] 2.5.2 Implement cache key generation based on text and rule context
+    - [x] 2.5.3 Add cache invalidation strategy for text changes
+    - [x] 2.5.4 Optimize cache size and cleanup for memory management
+
+- [x] 3.0 Enhance Style Rules with Context Awareness
+  - [x] 3.1 Refactor "there-are-many" rule with sentence boundary detection
+    - [x] 3.1.1 Update regex pattern to capture complete phrase with following noun
+    - [x] 3.1.2 Implement context-aware replacement that preserves sentence structure
+    - [x] 3.1.3 Add validation to ensure replacement forms complete sentence
+    - [x] 3.1.4 Test with various sentence positions and contexts
+  - [x] 3.2 Improve "a-lot-of" rule with countable/uncountable noun detection
+    - [x] 3.2.1 Create noun classification system (countable vs uncountable)
+    - [x] 3.2.2 Implement smart replacement logic (many vs much based on noun type)
+    - [x] 3.2.3 Add handling for edge cases and ambiguous nouns
+    - [x] 3.2.4 Test with various noun types and grammatical contexts
+  - [x] 3.3 Update weak opening rules to ensure complete sentence formation
+    - [x] 3.3.1 Modify "it-is-important" rule to preserve sentence completeness
+    - [x] 3.3.2 Update "there-are" patterns to maintain grammatical structure
+    - [x] 3.3.3 Add sentence flow validation for opening phrase replacements
+    - [x] 3.3.4 Test weak opening rules with various sentence structures
+  - [x] 3.4 Enhance filler word removal with context preservation
+    - [x] 3.4.1 Update "basically" rule to avoid creating sentence fragments
+    - [x] 3.4.2 Improve "literally" rule with better context detection
+    - [x] 3.4.3 Add punctuation handling for filler word removal
+    - [x] 3.4.4 Test filler word rules with various grammatical contexts
+  - [x] 3.5 Add context-aware replacement functions for all existing style rules
+    - [x] 3.5.1 Audit all existing style rules for context-awareness issues
+    - [x] 3.5.2 Implement smart replacement functions for problematic rules
+    - [x] 3.5.3 Add validation hooks to all style rule applications
+    - [x] 3.5.4 Test all updated rules with real-world text examples
+
+- [ ] 4.0 Implement Linguistic Intelligence Helpers
+  - [ ] 4.1 Create basic noun categorization system (countable vs uncountable)
+    - [ ] 4.1.1 Build noun classification database with common words
+    - [ ] 4.1.2 Implement heuristic-based classification for unknown nouns
+    - [ ] 4.1.3 Add plural/singular detection and handling
+    - [ ] 4.1.4 Create noun context analysis for better classification
+  - [ ] 4.2 Build simple grammatical agreement checking functions
+    - [ ] 4.2.1 Implement subject-verb agreement validation
+    - [ ] 4.2.2 Add noun-adjective agreement checking
+    - [ ] 4.2.3 Create pronoun-antecedent agreement validation
+    - [ ] 4.2.4 Build article-noun agreement checking (a/an/the)
+  - [ ] 4.3 Implement word relationship analysis for better replacements
+    - [ ] 4.3.1 Create word dependency analysis for context understanding
+    - [ ] 4.3.2 Implement semantic similarity checking for replacements
+    - [ ] 4.3.3 Add collocation analysis for natural word combinations
+    - [ ] 4.3.4 Build word frequency analysis for replacement quality
+  - [ ] 4.4 Add sentence structure pattern recognition
+    - [ ] 4.4.1 Implement basic sentence pattern recognition (SVO, etc.)
+    - [ ] 4.4.2 Add clause boundary detection and analysis
+    - [ ] 4.4.3 Create phrase structure recognition for better context
+    - [ ] 4.4.4 Build sentence complexity analysis for appropriate suggestions
+  - [ ] 4.5 Create adaptive confidence scoring based on linguistic context
+    - [ ] 4.5.1 Implement multi-factor confidence calculation algorithm
+    - [ ] 4.5.2 Add linguistic feature weighting for confidence scores
+    - [ ] 4.5.3 Create confidence calibration system based on validation results
+    - [ ] 4.5.4 Build confidence threshold adaptation for different rule types
+
+- [x] 5.0 Integrate Enhanced System and Update UI
+  - [x] 5.1 Update grammar engine to use new validation pipeline
+    - [x] 5.1.1 Integrate context analysis into grammar checking workflow
+    - [x] 5.1.2 Add validation pipeline to suggestion generation process
+    - [x] 5.1.3 Implement confidence-based suggestion filtering
+    - [x] 5.1.4 Update error handling for validation failures
+  - [x] 5.2 Modify API route to filter suggestions by risk level and confidence
+    - [x] 5.2.1 Add risk level and confidence filtering to API response
+    - [x] 5.2.2 Implement user preference system for suggestion sensitivity
+    - [x] 5.2.3 Add API parameters for customizing suggestion thresholds
+    - [x] 5.2.4 Update API documentation with new filtering options
+  - [x] 5.3 Enhance Writing Issues UI to show suggestion confidence levels
+    - [x] 5.3.1 Add confidence indicators to suggestion display
+    - [x] 5.3.2 Implement visual confidence bars or percentage displays
+    - [x] 5.3.3 Add tooltips explaining confidence scores and risk levels
+    - [x] 5.3.4 Create user settings for confidence display preferences
+  - [x] 5.4 Add visual indicators for suggestion risk categories
+    - [x] 5.4.1 Design and implement risk level badges (SAFE/MODERATE/RISKY)
+    - [x] 5.4.2 Add color coding for different risk categories
+    - [x] 5.4.3 Implement warning messages for risky suggestions
+    - [x] 5.4.4 Create user confirmation dialogs for high-risk changes
+  - [x] 5.5 Update suggestion application logic to handle context-aware replacements
+    - [x] 5.5.1 Modify suggestion application to use smart replacement functions
+    - [x] 5.5.2 Add validation before applying suggestions to prevent errors
+    - [x] 5.5.3 Implement rollback functionality for problematic applications
+    - [x] 5.5.4 Update position mapping to handle complex replacements
+ 

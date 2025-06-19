@@ -46,3 +46,17 @@ export type GrammarSuggestion = {
     correct: string
   }[]
 }
+
+export type IgnoredSuggestion = {
+  id: string
+  document_id: string
+  user_id: string
+  original_text: string
+  suggestion_type: "grammar" | "spelling" | "style"
+  rule_id?: string
+  position_start: number
+  position_end: number
+  context_before?: string
+  context_after?: string
+  ignored_at: string
+}

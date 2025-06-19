@@ -7,7 +7,7 @@ import { AuthProvider } from "@/components/auth-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "WriteAssist - AI-Powered Writing Assistant",
+  title: "WordWiseAI - AI-Powered Writing Assistant",
   description: "Transform your writing with AI-powered grammar checking, tone analysis, and intelligent suggestions.",
     generator: 'v0.dev'
 }

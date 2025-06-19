@@ -1,18 +1,17 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 import type { Document } from "@/lib/db"
 import { DocumentSidebar } from "@/components/document-sidebar"
-import { EditorPanel, type EditorActions } from "@/components/editor-panel"
+import { EditorPanel, type EditorActions, type Suggestion } from "@/components/editor-panel"
 import { ToneIndicator } from "@/components/tone-indicator"
 import { WritingIssues } from "@/components/writing-issues"
 import { ProtectedRoute } from "@/components/protected-route"
-import type { GrammarSuggestion } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Save, FileText, Clock, BarChart3 } from "lucide-react"
+import { FileText, Clock, BarChart3 } from "lucide-react"
 import { debounce } from "lodash"
 
 export default function DashboardPage() {
@@ -21,10 +20,13 @@ export default function DashboardPage() {
   const [documentTitle, setDocumentTitle] = useState("")
   const [documentContent, setDocumentContent] = useState("")
   const [documentTone, setDocumentTone] = useState<string | null>(null)
-  const [suggestions, setSuggestions] = useState<GrammarSuggestion[]>([])
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [editorActions, setEditorActions] = useState<EditorActions | null>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<"saving" | "saved">("saved")
+  // Refs to hold the latest saveDocument logic and the debounced function
+  const saveDocumentRef = useRef<() => Promise<void>>(async () => {})
+  const debouncedSaveRef = useRef<ReturnType<typeof debounce> | null>(null)
 
   // Load documents
   const loadDocuments = async () => {
@@ -54,7 +56,9 @@ export default function DashboardPage() {
   const saveDocument = async () => {
     if (!selectedDocument) return
 
-    setSaving(true)
+    // Mark as saving
+    setSaveStatus("saving")
+
     try {
       const response = await fetch(`/api/documents/${selectedDocument.id}`, {
         method: "PUT",
@@ -74,17 +78,21 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Failed to save document:", error)
     } finally {
-      setSaving(false)
+      // Persistently indicate the document is saved
+      setSaveStatus("saved")
     }
   }
 
-  // Debounced save
-  const debouncedSave = useCallback(debounce(saveDocument, 2000), [
-    selectedDocument,
-    documentTitle,
-    documentContent,
-    documentTone,
-  ])
+  // Keep a stable reference to the latest saveDocument function
+  saveDocumentRef.current = saveDocument
+
+  // Initialise the debounced function only once
+  if (!debouncedSaveRef.current) {
+    debouncedSaveRef.current = debounce(() => {
+      // Use the latest function reference
+      saveDocumentRef.current()
+    }, 2000)
+  }
 
   // Create new document
   const createDocument = async () => {
@@ -143,24 +151,26 @@ export default function DashboardPage() {
       selectedDocument &&
       (documentTitle !== selectedDocument.title || documentContent !== selectedDocument.content)
     ) {
-      debouncedSave()
+      // Mark as saving immediately for user feedback
+      setSaveStatus("saving")
+      debouncedSaveRef.current?.()
     }
-  }, [documentTitle, documentContent, documentTone, selectedDocument, debouncedSave])
+  }, [documentTitle, documentContent, documentTone, selectedDocument, debouncedSaveRef])
 
   // Handle writing issues actions
-  const handleApplySuggestion = (suggestion: GrammarSuggestion, replacement: string) => {
+  const handleApplySuggestion = (suggestion: Suggestion, replacement: string) => {
     if (editorActions) {
       editorActions.applySuggestion(suggestion, replacement)
     }
   }
 
-  const handleIgnoreSuggestion = (suggestion: GrammarSuggestion) => {
+  const handleIgnoreSuggestion = (suggestion: Suggestion) => {
     if (editorActions) {
       editorActions.ignoreSuggestion(suggestion)
     }
   }
 
-  const handleHighlightSuggestion = (suggestion: GrammarSuggestion) => {
+  const handleHighlightSuggestion = (suggestion: Suggestion) => {
     if (editorActions) {
       editorActions.highlightSuggestion(suggestion)
     }
@@ -168,6 +178,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadDocuments()
+  }, [])
+
+  // Clean-up on unmount to cancel any pending save
+  useEffect(() => {
+    return () => {
+      debouncedSaveRef.current?.cancel()
+    }
   }, [])
 
   if (loading) {
@@ -203,12 +220,8 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="w-4 h-4" />
-                      {saving ? "Saving..." : "Saved"}
+                      {saveStatus === "saving" ? "Saving..." : "Saved"}
                     </div>
-                    <Button onClick={saveDocument} disabled={saving} size="sm">
-                      <Save className="w-4 h-4 mr-2" />
-                      Save
-                    </Button>
                   </div>
                 </div>
               </div>
@@ -217,6 +230,7 @@ export default function DashboardPage() {
               <div className="flex-1 flex">
                 <div className="flex-1 p-4">
                   <EditorPanel
+                    key={selectedDocument.id}
                     documentId={selectedDocument.id}
                     initialContent={documentContent}
                     onContentChange={setDocumentContent}

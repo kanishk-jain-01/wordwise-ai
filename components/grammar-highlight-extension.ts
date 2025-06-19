@@ -1,163 +1,72 @@
-import { Mark, mergeAttributes } from '@tiptap/core'
+import { Extension } from '@tiptap/core'
+import { Plugin, PluginKey } from 'prosemirror-state'
+import { Decoration, DecorationSet } from 'prosemirror-view'
 import type { GrammarSuggestion } from '@/lib/db'
 
-export interface GrammarHighlightOptions {
-  HTMLAttributes: Record<string, any>
-}
+// Unique plugin key for grammar highlights
+const grammarHighlightKey = new PluginKey('grammarHighlight')
 
-declare module '@tiptap/core' {
-  interface Commands<ReturnType> {
-    grammarHighlight: {
-      setGrammarHighlight: (attributes: { id: string; type: string }) => ReturnType
-      unsetGrammarHighlight: () => ReturnType
-      removeGrammarHighlight: (id: string) => ReturnType
-    }
-  }
-}
-
-export const GrammarHighlight = Mark.create<GrammarHighlightOptions>({
+export const GrammarHighlight = Extension.create({
   name: 'grammarHighlight',
 
-  addOptions() {
-    return {
-      HTMLAttributes: {},
-    }
-  },
-
-  addAttributes() {
-    return {
-      id: {
-        default: null,
-        parseHTML: element => element.getAttribute('data-grammar-id'),
-        renderHTML: attributes => {
-          if (!attributes.id) {
-            return {}
-          }
-          return {
-            'data-grammar-id': attributes.id,
-          }
-        },
-      },
-      type: {
-        default: 'grammar',
-        parseHTML: element => element.getAttribute('data-grammar-type'),
-        renderHTML: attributes => {
-          if (!attributes.type) {
-            return {}
-          }
-          return {
-            'data-grammar-type': attributes.type,
-          }
-        },
-      },
-    }
-  },
-
-  parseHTML() {
+  addProseMirrorPlugins() {
     return [
-      {
-        tag: 'span[data-grammar-id]',
-      },
-    ]
-  },
+      new Plugin({
+        key: grammarHighlightKey,
+        state: {
+          init: () => DecorationSet.empty,
+          apply(tr, oldDecos) {
+            // Map decorations through document changes
+            let decos = oldDecos.map(tr.mapping, tr.doc)
 
-  renderHTML({ HTMLAttributes }) {
-    const { type } = HTMLAttributes
-    const className = `grammar-highlight ${type}-error`
-    
-    return [
-      'span',
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-        class: className,
-      }),
-      0,
-    ]
-  },
-
-  addCommands() {
-    return {
-      setGrammarHighlight:
-        attributes =>
-        ({ commands }) => {
-          return commands.setMark(this.name, attributes)
-        },
-      unsetGrammarHighlight:
-        () =>
-        ({ commands }) => {
-          return commands.unsetMark(this.name)
-        },
-      removeGrammarHighlight:
-        (id: string) =>
-        ({ tr, state }) => {
-          const { doc } = state
-          const ranges: { from: number; to: number }[] = []
-
-          doc.descendants((node, pos) => {
-            if (node.isText) {
-              node.marks.forEach(mark => {
-                if (mark.type.name === 'grammarHighlight' && mark.attrs.id === id) {
-                  ranges.push({
-                    from: pos,
-                    to: pos + node.nodeSize,
-                  })
-                }
-              })
+            // If transaction carries new suggestions meta, rebuild decorations
+            const meta = tr.getMeta(grammarHighlightKey)
+            if (meta && meta.suggestions) {
+              decos = createDecorations(tr.doc, meta.suggestions)
             }
-          })
 
-          ranges.forEach(range => {
-            tr.removeMark(range.from, range.to, state.schema.marks.grammarHighlight)
-          })
-
-          return true
+            return decos
+          },
         },
-    }
+        props: {
+          decorations(state) {
+            return this.getState(state)
+          },
+        },
+      }),
+    ]
   },
 })
 
-// Helper function to apply grammar highlights to editor
-export function applyGrammarHighlights(editor: any, suggestions: GrammarSuggestion[]) {
-  if (!editor) return
+// Build decoration set from suggestions
+function createDecorations(doc: any, suggestions: (GrammarSuggestion & { from: number; to: number })[]) {
+  const decorations: Decoration[] = []
 
-  const { state } = editor
-  const { doc } = state
-  
-  // Create a new transaction
-  let tr = state.tr
-  
-  // First, clear all existing grammar highlights
-  doc.descendants((node: any, pos: number) => {
-    if (node.isText) {
-      node.marks.forEach((mark: any) => {
-        if (mark.type.name === 'grammarHighlight') {
-          tr = tr.removeMark(pos, pos + node.nodeSize, mark.type)
-        }
+  suggestions.forEach(({ from, to, type, id }) => {
+    if (from >= 0 && to <= doc.content.size && from < to) {
+      const className = `grammar-highlight ${type}-error`
+      const deco = Decoration.inline(from, to, {
+        class: className,
+        'data-grammar-id': id,
+        'data-grammar-type': type,
       })
+      decorations.push(deco)
     }
   })
 
-  // Apply new highlights
-  suggestions.forEach(suggestion => {
-    const from = suggestion.offset
-    const to = suggestion.offset + suggestion.length
+  return DecorationSet.create(doc, decorations)
+}
 
-    // Ensure the range is valid and within document bounds
-    if (from >= 0 && to <= doc.content.size && from < to && from < doc.content.size) {
-      try {
-        const mark = state.schema.marks.grammarHighlight.create({
-          id: suggestion.id,
-          type: suggestion.type,
-        })
-        
-        tr = tr.addMark(from, Math.min(to, doc.content.size), mark)
-      } catch (error) {
-        console.warn('Failed to apply grammar highlight:', error, { from, to, suggestion })
-      }
-    }
-  })
+// Helper: set highlights by passing suggestions via transaction meta
+export function applyGrammarHighlights(editor: any, suggestions: (GrammarSuggestion & { from: number; to: number })[]) {
+  if (!editor) return
+  const tr = editor.state.tr.setMeta(grammarHighlightKey, { suggestions })
+  editor.view.dispatch(tr)
+}
 
-  // Dispatch the transaction if there are changes
-  if (tr.steps.length > 0) {
-    editor.view.dispatch(tr)
-  }
+// Helper: clear all highlights
+export function clearGrammarHighlights(editor: any) {
+  if (!editor) return
+  const tr = editor.state.tr.setMeta(grammarHighlightKey, { suggestions: [] })
+  editor.view.dispatch(tr)
 } 

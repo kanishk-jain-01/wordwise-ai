@@ -1,8 +1,29 @@
 import { grammarRules, type GrammarRule } from './grammar-rules'
 import { spellingRules, type SpellingRule } from './spelling-rules'
 import { styleRules, type StyleRule } from './style-rules'
+import { EnhancedSpellingChecker } from './enhanced-spelling'
+import { enhancedStyleProcessor } from './enhanced-style-processor'
+import { contextAwareRuleSelector } from './context-aware-rule-selector'
 
 export type Rule = GrammarRule | SpellingRule | StyleRule
+
+export interface GrammarSuggestion {
+  id: string
+  type: "grammar" | "spelling" | "style"
+  message: string
+  shortMessage: string
+  category: string
+  confidence: number
+  start: number
+  end: number
+  text: string
+  replacement: string
+  ruleId?: string
+  // Enhanced validation metadata
+  validated?: boolean
+  validationRisk?: 'SAFE' | 'MODERATE' | 'RISKY'
+  validationReasons?: string[]
+}
 
 export interface GrammarError {
   type: 'grammar' | 'spelling' | 'style'
@@ -20,6 +41,7 @@ export interface GrammarError {
     incorrect: string
     correct: string
   }[]
+  suggestions?: string[] // Multiple suggestions for enhanced spelling
 }
 
 export interface GrammarCheckResult {
@@ -30,32 +52,93 @@ export interface GrammarCheckResult {
     spellingErrors: number
     styleErrors: number
     processingTime: number
+    enhancedSpelling?: {
+      wordsChecked: number
+      ruleBasedErrors: number
+      dictionaryErrors: number
+    }
   }
 }
 
 export class GrammarEngine {
   private allRules: Rule[]
+  private enhancedSpellingChecker: EnhancedSpellingChecker
+  private useEnhancedStyleRules: boolean
   
-  constructor() {
+  constructor(options: { useEnhancedStyleRules?: boolean } = {}) {
+    this.useEnhancedStyleRules = options.useEnhancedStyleRules ?? true
+    
+    // Filter out problematic style rules if using enhanced processing
+    const filteredStyleRules = this.useEnhancedStyleRules 
+      ? styleRules.filter(rule => !contextAwareRuleSelector.shouldUseContextAwareRule(rule.id))
+      : styleRules
+    
     this.allRules = [
       ...grammarRules,
-      ...spellingRules,
-      ...styleRules
+      // Remove spelling rules from here - they're handled by enhanced spelling checker
+      ...filteredStyleRules
     ]
+    this.enhancedSpellingChecker = new EnhancedSpellingChecker()
   }
 
   /**
    * Check text for grammar, spelling, and style issues
    */
-  checkText(text: string): GrammarCheckResult {
+  async checkText(text: string): Promise<GrammarCheckResult> {
     const startTime = Date.now()
     const errors: GrammarError[] = []
     
-    // Process each rule
+    // Process grammar and non-problematic style rules
     for (const rule of this.allRules) {
       const ruleErrors = this.applyRule(text, rule)
       errors.push(...ruleErrors)
     }
+
+    // Process enhanced style rules if enabled
+    if (this.useEnhancedStyleRules) {
+      try {
+        const enhancedStyleSuggestions = await enhancedStyleProcessor.processStyleSuggestions(text)
+        
+        // Convert enhanced style suggestions to GrammarError format
+        const enhancedStyleErrors = enhancedStyleSuggestions.map(suggestion => ({
+          type: suggestion.type as 'grammar' | 'spelling' | 'style',
+          ruleId: suggestion.ruleId || 'unknown',
+          message: suggestion.message,
+          shortMessage: suggestion.shortMessage,
+          category: suggestion.category,
+          confidence: suggestion.confidence,
+          offset: suggestion.start,
+          length: suggestion.end - suggestion.start,
+          text: suggestion.text,
+          replacement: suggestion.replacement,
+          context: text.substring(
+            Math.max(0, suggestion.start - 30), 
+            Math.min(text.length, suggestion.end + 30)
+          ),
+          // Include validation metadata
+          suggestions: [suggestion.replacement],
+          validated: (suggestion as any).validated,
+          validationRisk: (suggestion as any).validationRisk,
+          validationReasons: (suggestion as any).validationReasons
+        }))
+        
+        errors.push(...enhancedStyleErrors)
+      } catch (error) {
+        console.warn('Enhanced style processing failed, falling back to standard rules:', error)
+        // Fallback: process problematic style rules with standard logic
+        const problematicStyleRules = styleRules.filter(rule => 
+          contextAwareRuleSelector.shouldUseContextAwareRule(rule.id)
+        )
+        for (const rule of problematicStyleRules) {
+          const ruleErrors = this.applyRule(text, rule)
+          errors.push(...ruleErrors)
+        }
+      }
+    }
+
+    // Process enhanced spelling check
+    const spellingResult = this.enhancedSpellingChecker.checkSpelling(text)
+    errors.push(...spellingResult.errors)
 
     // Sort errors by position
     errors.sort((a, b) => a.offset - b.offset)
@@ -68,11 +151,16 @@ export class GrammarEngine {
     return {
       errors: filteredErrors,
       stats: {
-        totalChecks: this.allRules.length,
+        totalChecks: this.allRules.length + (this.useEnhancedStyleRules ? 1 : 0),
         grammarErrors: filteredErrors.filter(e => e.type === 'grammar').length,
         spellingErrors: filteredErrors.filter(e => e.type === 'spelling').length,
         styleErrors: filteredErrors.filter(e => e.type === 'style').length,
-        processingTime
+        processingTime,
+        enhancedSpelling: {
+          wordsChecked: spellingResult.stats.wordsChecked,
+          ruleBasedErrors: spellingResult.stats.ruleBasedErrors,
+          dictionaryErrors: spellingResult.stats.dictionaryErrors
+        }
       }
     }
   }
