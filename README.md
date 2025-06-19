@@ -106,7 +106,7 @@ wordwise-ai/
 │   ├── dashboard/         # Main application
 │   └── globals.css        # Global styles
 ├── components/            # React components
-│   ├── ui/               # shadcn/ui components
+│   ├── ui/               # Essential UI components only
 │   └── *.tsx             # Feature components
 ├── lib/                   # Utilities and configurations
 │   ├── enhanced-spelling-engine.ts  # Multi-stage spelling engine

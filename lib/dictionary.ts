@@ -39,7 +39,6 @@ class DictionaryService {
     })
 
     this.loaded = true
-    console.log(`[Dictionary] Loaded ${this.words.size} words`)
   }
 
   isValid(word: string): boolean {

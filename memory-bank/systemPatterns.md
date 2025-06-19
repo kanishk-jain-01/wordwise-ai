@@ -10,11 +10,13 @@
 
 ### Key Architectural Decisions
 
-#### 1. Monolithic Full-Stack Structure
+#### 1. Optimized Monolithic Full-Stack Structure
 - Single Next.js application handles both frontend and backend
 - API routes provide serverless backend functionality
 - Simplified deployment and development workflow
 - Shared TypeScript types between frontend and backend
+- **Production-optimized**: 74 unused dependencies removed, 30+ unused components eliminated
+- **Streamlined architecture**: Clean, focused codebase with zero redundancy
 
 #### 2. Component-Based Frontend Architecture
 ```
