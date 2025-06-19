@@ -5,7 +5,7 @@ import type { Suggestion } from './editor-panel'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, SpellCheck, PenTool, CheckCircle, X } from "lucide-react"
+import { AlertCircle, SpellCheck, PenTool, CheckCircle, X, Shield, AlertTriangle, Zap } from "lucide-react"
 
 type WritingIssuesProps = {
   suggestions: Suggestion[]
@@ -20,6 +20,32 @@ export function WritingIssues({
   onIgnoreSuggestion, 
   onHighlightSuggestion 
 }: WritingIssuesProps) {
+  const getRiskIcon = (risk?: string) => {
+    switch (risk) {
+      case 'SAFE':
+        return <Shield className="w-3 h-3 text-green-500" />
+      case 'MODERATE':
+        return <AlertTriangle className="w-3 h-3 text-yellow-500" />
+      case 'RISKY':
+        return <Zap className="w-3 h-3 text-red-500" />
+      default:
+        return null
+    }
+  }
+
+  const getRiskColor = (risk?: string) => {
+    switch (risk) {
+      case 'SAFE':
+        return 'bg-green-50 text-green-700 border-green-200'
+      case 'MODERATE':
+        return 'bg-yellow-50 text-yellow-700 border-yellow-200'
+      case 'RISKY':
+        return 'bg-red-50 text-red-700 border-red-200'
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200'
+    }
+  }
+
   const getIssueIcon = (type: string) => {
     switch (type) {
       case 'grammar':
@@ -99,11 +125,45 @@ export function WritingIssues({
                       {Math.round(suggestion.confidence * 100)}% confident
                     </Badge>
                   )}
+                  {/* Enhanced: Show validation risk level */}
+                  {(suggestion as any).validationRisk && (
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs flex items-center gap-1 ${getRiskColor((suggestion as any).validationRisk)}`}
+                    >
+                      {getRiskIcon((suggestion as any).validationRisk)}
+                      {(suggestion as any).validationRisk}
+                    </Badge>
+                  )}
+                  {/* Enhanced: Show if suggestion was validated */}
+                  {(suggestion as any).validated && (
+                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                      ✓ Validated
+                    </Badge>
+                  )}
                 </div>
                 
                 <p className="text-sm font-medium text-foreground mb-1">
                   {suggestion.shortMessage || suggestion.message}
                 </p>
+                
+                {/* Enhanced: Show validation reasons if available */}
+                {(suggestion as any).validationReasons && (suggestion as any).validationReasons.length > 0 && (
+                  <div className="mb-2">
+                    <details className="text-xs">
+                      <summary className="text-muted-foreground cursor-pointer hover:text-foreground">
+                        Why this suggestion? ({(suggestion as any).validationReasons.length} reasons)
+                      </summary>
+                      <ul className="mt-1 ml-4 space-y-1 text-muted-foreground">
+                        {(suggestion as any).validationReasons.map((reason: string, index: number) => (
+                          <li key={index} className="list-disc">
+                            {reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  </div>
+                )}
                 
                 {suggestion.context && (
                   <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
@@ -119,16 +179,26 @@ export function WritingIssues({
                       <div className="flex items-center gap-2">
                         <Button
                           size="sm"
-                          variant="default"
-                          className="h-6 px-2 text-xs"
+                          variant={(suggestion as any).validationRisk === 'RISKY' ? "outline" : "default"}
+                          className={`h-6 px-2 text-xs ${
+                            (suggestion as any).validationRisk === 'RISKY' 
+                              ? 'border-red-200 text-red-700 hover:bg-red-50' 
+                              : ''
+                          }`}
                           onClick={(e) => {
                             e.stopPropagation()
                             onApplySuggestion(suggestion, suggestion.replacements[0])
                           }}
                         >
-                          <CheckCircle className="w-3 h-3 mr-1" />
+                          {(suggestion as any).validationRisk === 'RISKY' 
+                            ? <AlertTriangle className="w-3 h-3 mr-1" />
+                            : <CheckCircle className="w-3 h-3 mr-1" />
+                          }
                           Apply "{suggestion.replacements[0]}"
                         </Button>
+                        {(suggestion as any).validationRisk === 'RISKY' && (
+                          <span className="text-xs text-red-600">⚠ High risk</span>
+                        )}
                       </div>
                     ) : (
                       // Multiple suggestions - show as options

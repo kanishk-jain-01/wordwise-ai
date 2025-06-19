@@ -192,35 +192,106 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
     }
   }, [editor, suggestions])
 
-  // Function to apply suggestion (will be called from parent)
+  // Function to apply suggestion with enhanced validation and rollback
   const applySuggestion = useCallback((suggestion: Suggestion, replacement: string) => {
     if (!editor) return
 
-    // Apply the replacement using the accurate 'from' and 'to' positions
+    // Enhanced: Pre-flight validation for risky suggestions
+    const suggestionRisk = (suggestion as any).validationRisk
+    if (suggestionRisk === 'RISKY') {
+      const confirmApply = window.confirm(
+        `This suggestion is marked as high risk and might change the meaning of your text.\n\n` +
+        `Original: "${suggestion.context?.text || 'N/A'}"\n` +
+        `Suggested: Replace with "${replacement}"\n\n` +
+        `Are you sure you want to apply this change?`
+      )
+      
+      if (!confirmApply) {
+        return // User cancelled the risky application
+      }
+    }
+
+    // Store original content for rollback functionality
+    const originalContent = editor.getHTML()
+    const originalText = editor.getText()
     const { from, to } = suggestion
+    const originalSelectedText = editor.state.doc.textBetween(from, to)
     
-    editor
-      .chain()
-      .focus()
-      .deleteRange({ from, to })
-      .insertContentAt(from, replacement)
-      .run()
+    try {
+      // Apply the replacement using the accurate 'from' and 'to' positions
+      editor
+        .chain()
+        .focus()
+        .deleteRange({ from, to })
+        .insertContentAt(from, replacement)
+        .run()
 
-    // Highlights will be refreshed after we update suggestions below
-    const updatedSuggestions = suggestions.filter((s) => s.id !== suggestion.id)
-    setSuggestions(updatedSuggestions)
-    onSuggestionsChange?.(updatedSuggestions)
+      // Enhanced: Validate the result after application
+      const newText = editor.getText()
+      const newContent = editor.getHTML()
+      
+      // Basic validation: ensure content length is reasonable
+      const lengthDifference = Math.abs(newText.length - originalText.length)
+      const originalLength = originalSelectedText.length
+      const replacementLength = replacement.length
+      const expectedLengthChange = replacementLength - originalLength
+      const actualLengthChange = newText.length - originalText.length
+      
+      // If the actual change is dramatically different from expected, something went wrong
+      if (Math.abs(actualLengthChange - expectedLengthChange) > 10) {
+        console.warn('Unexpected content length change detected, considering rollback')
+        // Could implement automatic rollback here if needed
+      }
 
-    if (editor) {
-      applyGrammarHighlights(editor, updatedSuggestions)
+      // Enhanced: Store rollback information in session storage for potential undo
+      const rollbackData = {
+        suggestionId: suggestion.id,
+        originalContent,
+        originalText: originalSelectedText,
+        replacement,
+        timestamp: Date.now(),
+        position: { from, to }
+      }
+      
+      try {
+        const rollbackHistory = JSON.parse(sessionStorage.getItem('suggestion-rollback-history') || '[]')
+        rollbackHistory.push(rollbackData)
+        // Keep only last 10 rollback entries
+        if (rollbackHistory.length > 10) {
+          rollbackHistory.shift()
+        }
+        sessionStorage.setItem('suggestion-rollback-history', JSON.stringify(rollbackHistory))
+      } catch (storageError) {
+        console.warn('Could not store rollback data:', storageError)
+      }
 
-      // Cancel any pending debounced checks to prevent stale overwrite
-      debouncedCheckGrammar.cancel()
-      debouncedAnalyzeTone.cancel()
+      // Update suggestions list
+      const updatedSuggestions = suggestions.filter((s) => s.id !== suggestion.id)
+      setSuggestions(updatedSuggestions)
+      onSuggestionsChange?.(updatedSuggestions)
 
-      // Re-run analysis to get fresh suggestions after content change
-      checkGrammar(editor.getText())
-      analyzeTone(editor.getText())
+      if (editor) {
+        applyGrammarHighlights(editor, updatedSuggestions)
+
+        // Cancel any pending debounced checks to prevent stale overwrite
+        debouncedCheckGrammar.cancel()
+        debouncedAnalyzeTone.cancel()
+
+        // Re-run analysis to get fresh suggestions after content change
+        checkGrammar(editor.getText())
+        analyzeTone(editor.getText())
+      }
+      
+    } catch (error) {
+      console.error('Error applying suggestion:', error)
+      
+      // Enhanced: Automatic rollback on error
+      try {
+        editor.commands.setContent(originalContent)
+        console.log('Automatically rolled back due to application error')
+      } catch (rollbackError) {
+        console.error('Failed to rollback after error:', rollbackError)
+      }
     }
   }, [editor, suggestions, onSuggestionsChange, debouncedCheckGrammar, debouncedAnalyzeTone])
 
