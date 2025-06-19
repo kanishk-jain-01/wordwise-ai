@@ -32,7 +32,7 @@ export default function HomePage() {
           AI-Powered Writing Assistant
         </Badge>
         <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-          Write Better, Faster, Smarter
+          Write Tweets Better, Faster, Smarter
         </h1>
         <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
           Transform your writing with AI-powered grammar checking, tone analysis, and intelligent suggestions. Perfect
@@ -113,10 +113,10 @@ export default function HomePage() {
               <div className="p-2 bg-primary rounded-lg">
                 <FileText className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-semibold">WriteAssist</span>
+              <span className="font-semibold">WordWiseAI</span>
             </div>
             <div className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} WriteAssist. All rights reserved.
+              © {new Date().getFullYear()} WordWiseAI. All rights reserved.
             </div>
           </div>
         </div>
