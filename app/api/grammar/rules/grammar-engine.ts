@@ -21,6 +21,7 @@ export interface GrammarError {
     incorrect: string
     correct: string
   }[]
+  suggestions?: string[] // Multiple suggestions for enhanced spelling
 }
 
 export interface GrammarCheckResult {

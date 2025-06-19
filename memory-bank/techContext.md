@@ -96,6 +96,7 @@ NEXTAUTH_URL=http://localhost:3000 (or production URL)
 - **TypeScript**: Strict typing for development safety
 - **Tailwind CSS**: Utility-first styling approach
 - **TipTap**: Modern rich text editor with extensibility. **Note**: When converting document nodes to plain text for analysis, TipTap's underlying ProseMirror library uses a double space (`"  "`) as a block separator. Any custom text serialization or position mapping must account for this to ensure accuracy.
+- **Enhanced Spelling Engine**: Custom multi-stage ranking system with frequency analysis, keyboard distance awareness, phonetic matching, and context-aware n-gram analysis for superior suggestion quality.
 
 ### Database Schema Design
 ```sql

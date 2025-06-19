@@ -94,6 +94,11 @@ export function WritingIssues({
                   <Badge variant="outline" className="text-xs capitalize">
                     {suggestion.type}
                   </Badge>
+                  {suggestion.confidence && (
+                    <Badge variant="secondary" className="text-xs">
+                      {Math.round(suggestion.confidence * 100)}% confident
+                    </Badge>
+                  )}
                 </div>
                 
                 <p className="text-sm font-medium text-foreground mb-1">
@@ -106,35 +111,83 @@ export function WritingIssues({
                   </p>
                 )}
                 
-                <div className="flex items-center gap-2">
-                  {suggestion.replacements && suggestion.replacements.length > 0 && (
+                {/* Enhanced suggestion display for multiple options */}
+                {suggestion.replacements && suggestion.replacements.length > 0 && (
+                  <div className="space-y-2">
+                    {suggestion.replacements.length === 1 ? (
+                      // Single suggestion - show as before
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="h-6 px-2 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onApplySuggestion(suggestion, suggestion.replacements[0])
+                          }}
+                        >
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Apply "{suggestion.replacements[0]}"
+                        </Button>
+                      </div>
+                    ) : (
+                      // Multiple suggestions - show as options
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground font-medium">Suggestions:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {suggestion.replacements.slice(0, 3).map((replacement, index) => (
+                            <Button
+                              key={replacement}
+                              size="sm"
+                              variant={index === 0 ? "default" : "outline"}
+                              className="h-6 px-2 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onApplySuggestion(suggestion, replacement)
+                              }}
+                            >
+                              {index === 0 && <CheckCircle className="w-3 h-3 mr-1" />}
+                              "{replacement}"
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onIgnoreSuggestion(suggestion)
+                        }}
+                      >
+                        <X className="w-3 h-3 mr-1" />
+                        Ignore
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Fallback for suggestions without replacements */}
+                {(!suggestion.replacements || suggestion.replacements.length === 0) && (
+                  <div className="flex items-center gap-2">
                     <Button
                       size="sm"
-                      variant="default"
+                      variant="ghost"
                       className="h-6 px-2 text-xs"
                       onClick={(e) => {
                         e.stopPropagation()
-                        onApplySuggestion(suggestion, suggestion.replacements[0])
+                        onIgnoreSuggestion(suggestion)
                       }}
                     >
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      Apply
+                      <X className="w-3 h-3 mr-1" />
+                      Ignore
                     </Button>
-                  )}
-                  
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 px-2 text-xs"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onIgnoreSuggestion(suggestion)
-                    }}
-                  >
-                    <X className="w-3 h-3 mr-1" />
-                    Ignore
-                  </Button>
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -49,11 +49,17 @@ app/api/
 - **Connection**: Serverless-optimized connection pooling
 - **Migrations**: SQL scripts in `/scripts` directory
 
-### 3. Real-Time Analysis Pattern
+### 3. Enhanced Real-Time Analysis Pattern
+- **Multi-Stage Spelling Engine**: Implemented sophisticated suggestion ranking system combining:
+  - **Frequency Analysis**: 370k+ word dictionary with frequency weighting
+  - **Keyboard Distance**: QWERTY-aware proximity scoring for typo detection
+  - **Phonetic Matching**: Simplified Soundex algorithm for pronunciation-based errors
+  - **Context Awareness**: N-gram analysis using surrounding words for better suggestions
+  - **Confidence Scoring**: Multi-dimensional confidence calculation with intelligent filtering
 - **Frontend / Backend Decoupling**: The backend grammar engine operates on plain text for simplicity and performance. The frontend is responsible for translating rich-text editor content into plain text for the API and then mapping the returned suggestion offsets back to the editor's coordinate system.
 - **Position Mapping**: To ensure highlighting and replacements are accurate, the frontend generates a position map on each analysis request. This map links the index of every character in the plain-text string to its corresponding position in the editor's document model (ProseMirror). This is critical because ProseMirror uses a double space (`"  "`) to separate block nodes, causing a divergence from a simple text representation.
 - **Debouncing**: User input is debounced (1000ms for grammar, 2000ms for tone) to prevent excessive API calls during typing.
-- **Caching**: Analysis results for a given piece of text are cached in Redis to provide instantaneous results for repeated checks.
+- **Intelligent Caching**: Analysis results cached in Redis with keyboard distance caching and frequency lookup optimization.
 
 ### 4. Editor Integration Pattern
 - **Editor**: TipTap rich text editor

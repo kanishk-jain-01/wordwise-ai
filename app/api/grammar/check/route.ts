@@ -39,7 +39,10 @@ async function checkGrammar(text: string): Promise<GrammarSuggestion[]> {
     shortMessage: error.shortMessage,
     offset: error.offset,
     length: error.length,
-    replacements: error.replacement ? [error.replacement] : [],
+    // Use multiple suggestions from enhanced spelling engine, fallback to single replacement
+    replacements: error.suggestions && error.suggestions.length > 0 
+      ? error.suggestions 
+      : (error.replacement ? [error.replacement] : []),
     context: {
       text: error.context,
       offset: error.offset,
