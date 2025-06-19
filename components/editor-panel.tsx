@@ -29,8 +29,8 @@ export function EditorPanel({ documentId, initialContent, onContentChange, onTon
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   
   // Refs to hold the latest function references
-  const checkGrammarRef = useRef<(text: string) => Promise<void>>()
-  const analyzeToneRef = useRef<(text: string) => Promise<void>>()
+  const checkGrammarRef = useRef<((text: string) => Promise<void>) | undefined>(undefined)
+  const analyzeToneRef = useRef<((text: string) => Promise<void>) | undefined>(undefined)
 
   const editor = useEditor({
     extensions: [StarterKit, GrammarHighlight],

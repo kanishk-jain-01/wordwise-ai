@@ -18,9 +18,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         try {
-          const users = await sql<User[]>`
+          const users = await sql`
             SELECT * FROM users WHERE email = ${credentials.email as string}
-          `
+          ` as User[]
 
           const user = users[0]
           if (!user) {
