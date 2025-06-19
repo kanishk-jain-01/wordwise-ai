@@ -366,7 +366,9 @@ export function getCachedSentenceBoundaries(text: string): SentenceBoundary[] {
   // Keep cache size reasonable
   if (sentenceBoundaryCache.size > 100) {
     const firstKey = sentenceBoundaryCache.keys().next().value;
-    sentenceBoundaryCache.delete(firstKey);
+    if (firstKey !== undefined) {
+      sentenceBoundaryCache.delete(firstKey);
+    }
   }
   
   sentenceBoundaryCache.set(textHash, boundaries);
@@ -615,8 +617,8 @@ export function detectSentenceIssues(text: string): {
   const suggestions: string[] = [];
   
   // Fragment detection
-  const isFragment = isFragment(trimmed);
-  if (isFragment) {
+  const isTextFragment = isFragment(trimmed);
+  if (isTextFragment) {
     issues.push('Sentence fragment detected');
     suggestions.push('Consider adding a subject or verb to complete the thought');
   }
@@ -640,7 +642,7 @@ export function detectSentenceIssues(text: string): {
   }
   
   return {
-    isFragment,
+    isFragment: isTextFragment,
     isRunOn,
     issues,
     suggestions

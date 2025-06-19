@@ -1,6 +1,6 @@
 import { StyleRule } from './style-rules'
 import { ContextAwareStyleRule, processWithContextAwareStyleRules } from './context-aware-style-rules'
-import { GrammarSuggestion } from '../grammar-engine'
+import { GrammarSuggestion } from './grammar-engine'
 import { buildContextMetadata } from '../../../../lib/grammar-context'
 import { validateSuggestion } from '../../../../lib/grammar-validation'
 

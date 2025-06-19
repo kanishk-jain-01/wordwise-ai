@@ -1,4 +1,4 @@
-import { GrammarRule } from '../grammar-rules'
+import { StyleRule } from './style-rules'
 import { getSentencePosition, isCompleteSentence, buildContextMetadata, ContextMetadata } from '../../../../lib/grammar-context'
 import { validateSuggestion, SuggestionValidation } from '../../../../lib/grammar-validation'
 
@@ -12,7 +12,7 @@ export interface GrammarContext {
   isCompleteSentence: boolean
 }
 
-export interface ContextAwareStyleRule extends Omit<GrammarRule, 'replacement'> {
+export interface ContextAwareStyleRule extends Omit<StyleRule, 'replacement'> {
   contextAwareReplacement: (match: string, context: GrammarContext) => string | null
   riskLevel: 'safe' | 'moderate' | 'risky'
   requiresValidation: boolean

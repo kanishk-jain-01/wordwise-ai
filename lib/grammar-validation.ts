@@ -7,7 +7,6 @@
 import {
   validateReplacement,
   buildContextMetadata,
-  validateSentenceCompleteness,
   SentencePosition,
   type ContextMetadata
 } from './grammar-context';
@@ -101,7 +100,9 @@ export function validateSuggestionInContext(context: SuggestionContext): Validat
   if (validationCache.size > 200) {
     // Clean up old entries
     const firstKey = validationCache.keys().next().value;
-    validationCache.delete(firstKey);
+    if (firstKey !== undefined) {
+      validationCache.delete(firstKey);
+    }
   }
   validationCache.set(cacheKey, result);
   
@@ -112,7 +113,7 @@ export function validateSuggestionInContext(context: SuggestionContext): Validat
  * Core validation logic
  */
 function performValidation(context: SuggestionContext): ValidationResult {
-  const { originalText, offset, length, replacement, ruleId, ruleType, originalConfidence } = context;
+  const { originalText, offset, length, replacement, originalConfidence } = context;
   
   // Step 1: Basic replacement validation
   const replacementValidation = validateReplacement(originalText, offset, length, replacement);
@@ -560,7 +561,6 @@ export function compareBeforeAfter(
   issues: string[];
 } {
   const originalPhrase = originalText.substring(offset, offset + length);
-  const newText = originalText.substring(0, offset) + replacement + originalText.substring(offset + length);
   
   // Calculate metrics
   const lengthChange = replacement.length - length;
@@ -703,7 +703,7 @@ export function filterSuggestionsByValidation(
  */
 export async function filterGrammarSuggestionsByValidation(
   suggestions: any[],
-  originalText: string
+  _originalText: string
 ): Promise<any[]> {
   // For now, just return the suggestions as-is since they're already validated
   // in the enhanced style processor pipeline

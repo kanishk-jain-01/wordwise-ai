@@ -1,4 +1,4 @@
-import { GrammarSuggestion } from '../grammar-engine'
+import { GrammarSuggestion } from './grammar-engine'
 import { processWithContextAwareStyleRules, convertToGrammarSuggestions, contextAwareStyleRules } from './context-aware-style-rules'
 import { filterGrammarSuggestionsByValidation } from '../../../../lib/grammar-validation'
 
@@ -80,16 +80,17 @@ export class EnhancedStyleProcessor {
     const relevantSuggestion = suggestions.find(s => s.start === start && s.end === end)
     
     // Get context analysis for this position
-    const { buildContextMetadata } = await import('../../../../lib/grammar-context')
-    const context = buildContextMetadata(text, start, end)
+    const { buildContextMetadata, extractContextWindow } = await import('../../../../lib/grammar-context')
+    const context = buildContextMetadata(text, start, end - start)
+    const contextWindow = extractContextWindow(text, start, end - start, 50)
     
     return {
       originalText,
       matchedRules: suggestions.filter(s => s.start === start && s.end === end).map(s => s.ruleId || 'unknown'),
       contextAnalysis: {
         sentencePosition: context.sentencePosition,
-        isCompleteSentence: context.isCompleteSentence,
-        surroundingContext: context.beforeContext + '[MATCH]' + context.afterContext
+        isCompleteSentence: context.sentenceBoundary.isComplete,
+        surroundingContext: contextWindow.before + '[MATCH]' + contextWindow.after
       },
       validationResults: relevantSuggestion ? {
         validated: (relevantSuggestion as any).validated,
